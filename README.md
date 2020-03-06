@@ -1,25 +1,17 @@
-# 2DSceneRelighting
+# 2D Scene Relighting
+
 CS413
-https://docs.google.com/presentation/d/1voqFg5C423beu2QcHX0ZC3_lihnOou5J3-bTU8Ocn6M/edit?usp=sharing
-https://www.overleaf.com/project/5e551e394afdc30001e0e28a
 
-Read biblio (distibute among us)
-Alex 
-A dataset
-Underexposed
-Deep Image
-Kuba
-Intrinsic images
-Single
-Learning photographic
-Martin
-Learning image decompostion
-Exposur
-Shading
+The current progress of the project is summarized in [these slides](https://docs.google.com/presentation/d/1voqFg5C423beu2QcHX0ZC3_lihnOou5J3-bTU8Ocn6M/edit?usp=sharing) and [this report](https://www.overleaf.com/project/5e551e394afdc30001e0e28a).
 
-Focus on cycle GAN, star GAN, style transfer
+## References
 
-3 possibilities
-N styles to N styles
-N styles to 1 style (ex: create warm lights in any pictures)
-1 style to N style (ex: create warm lights in cold pictures)
+- [A Dataset of Multi-Illumination Images in the Wild](http://openaccess.thecvf.com/content_ICCV_2019/papers/Murmann_A_Dataset_of_Multi-Illumination_Images_in_the_Wild_ICCV_2019_paper.pdf)
+- [Underexposed Photo Enhancement using Deep Illumination Estimation](http://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_Underexposed_Photo_Enhancement_Using_Deep_Illumination_Estimation_CVPR_2019_paper.pdf)
+- [Deep Image-Based Relighting from Optimal Sparse Samples](https://www.ics.uci.edu/~yug10/projects/megvii/ref/Xu%20-%202018%20-%20Deep%20Image-Based%20Relighting%20from%20Optimal%20Sparse%20Samples.pdf)
+- [Intrinsic images in the wild](https://dl.acm.org/doi/10.1145/2601097.2601206)
+- [Single Image Portrait Relighting](https://cseweb.ucsd.edu/~ravir/portrait_relighting.pdf)
+- [Learning Intrinsic Image Decomposition from Watching the World](https://arxiv.org/pdf/1804.00582.pdf)
+- [Shading Annotations in the Wild](http://openaccess.thecvf.com/content_cvpr_2017/papers/Kovacs_Shading_Annotations_in_CVPR_2017_paper.pdf)
+- [Stargan: Unified generative adversarial networks for multi-domain image-to-image translation](http://openaccess.thecvf.com/content_cvpr_2018/papers/Choi_StarGAN_Unified_Generative_CVPR_2018_paper.pdf)
+- [Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks](http://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_Unpaired_Image-To-Image_Translation_ICCV_2017_paper.pdf)

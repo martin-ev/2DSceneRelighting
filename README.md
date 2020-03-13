@@ -10,7 +10,7 @@ The current progress of the project is summarized in [these slides](https://docs
 - [Underexposed Photo Enhancement using Deep Illumination Estimation](http://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_Underexposed_Photo_Enhancement_Using_Deep_Illumination_Estimation_CVPR_2019_paper.pdf)
 - [Deep Image-Based Relighting from Optimal Sparse Samples](https://www.ics.uci.edu/~yug10/projects/megvii/ref/Xu%20-%202018%20-%20Deep%20Image-Based%20Relighting%20from%20Optimal%20Sparse%20Samples.pdf)
 - [Intrinsic images in the wild](https://dl.acm.org/doi/10.1145/2601097.2601206)
-- [Single Image Portrait Relighting](https://cseweb.ucsd.edu/~ravir/portrait_relighting.pdf)
+- [Single Image Portrait Relighting](https://cseweb.ucsd.edu/~ravir/portrait_relighting.pdf) (code unavailable)
 - [Learning Intrinsic Image Decomposition from Watching the World](https://arxiv.org/pdf/1804.00582.pdf)
 - [Shading Annotations in the Wild](http://openaccess.thecvf.com/content_cvpr_2017/papers/Kovacs_Shading_Annotations_in_CVPR_2017_paper.pdf)
 - [Stargan: Unified generative adversarial networks for multi-domain image-to-image translation](http://openaccess.thecvf.com/content_cvpr_2018/papers/Choi_StarGAN_Unified_Generative_CVPR_2018_paper.pdf)

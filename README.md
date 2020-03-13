@@ -15,3 +15,4 @@ The current progress of the project is summarized in [these slides](https://docs
 - [Shading Annotations in the Wild](http://openaccess.thecvf.com/content_cvpr_2017/papers/Kovacs_Shading_Annotations_in_CVPR_2017_paper.pdf)
 - [Stargan: Unified generative adversarial networks for multi-domain image-to-image translation](http://openaccess.thecvf.com/content_cvpr_2018/papers/Choi_StarGAN_Unified_Generative_CVPR_2018_paper.pdf)
 - [Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks](http://openaccess.thecvf.com/content_ICCV_2017/papers/Zhu_Unpaired_Image-To-Image_Translation_ICCV_2017_paper.pdf)
+- [Deep Single-Image Portrait Relighting](http://openaccess.thecvf.com/content_ICCV_2019/papers/Zhou_Deep_Single-Image_Portrait_Relighting_ICCV_2019_paper.pdf), ([dataset](https://drive.google.com/drive/folders/10luekF8vV5vo2GFYPRCe9Rm2Xy2DwHkT), [code](https://github.com/zhhoper/DPR), [code 2](https://github.com/zhhoper/RI_render_DPR))

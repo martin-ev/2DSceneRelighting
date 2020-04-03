@@ -1,6 +1,8 @@
 papers/
 data/
+trained_models/
 runs/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

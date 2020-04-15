@@ -3,6 +3,7 @@ import os
 import torch
 import torchvision
 from PIL import Image as PILImage
+from tqdm import tqdm
 
 DATA_PATH = '/ivrldata1/students/VIDIT'
 TRAIN_DATA_PATH = os.path.join(DATA_PATH, 'train')
@@ -22,20 +23,44 @@ class Sample:
         self.color = color
         self.direction = direction
         self.scene = scene
+        
+        
 
 
 class Image:
     def __init__(self, sample, transform):
-        self.image = self._load_image(sample.path)
         self.location = sample.location
         self.color = sample.color
         self.direction = sample.direction
         self.scene = sample.scene
         self.transform = transform
+        self.image = self._load_image(sample.path)
 
     def _load_image(self, file_path):
         img = PILImage.open(file_path)
-        return self.transform(img)
+        return self.transform(img)[:3,:,:]
+    
+    def as_dict(self):
+        dico = {'location' : self.location,
+                'color' : int(self.color),
+                'direction' : self.dir_to_angle(self.direction),
+                'scene' : self.scene,
+                'image' : self.image,
+               }
+        return dico
+    
+    @staticmethod        
+    def dir_to_angle(direction):
+        angles = {'S':0,
+                  'SE':45,
+                  'E':90,
+                  'NE':135,
+                  'N':180,
+                  'NO':225,
+                  'O':270,
+                  'SO':315,              
+                 }
+        return angles[direction]
 
 
 class ImageDataset(torch.utils.data.Dataset):
@@ -110,7 +135,7 @@ class SameTargetSceneDataset(ImageDataset):
     only differ by light color and direction, but the physical content of both images is exactly the same.
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
-                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH):
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
         super(SameTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
                                                      target_directions, target_colors, data_path)
         self.items = []
@@ -121,9 +146,15 @@ class SameTargetSceneDataset(ImageDataset):
                     self.items.append((input_sample, target_sample))
 
         # Transformations to perform on loaded images
-        self.transform = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor()
-        ])
+        if transform is None:
+            self.transform = torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor()
+            ])
+        else:
+            self.transform = torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor(),
+                transform
+            ])
 
     def __getitem__(self, idx):
         input_sample, target_sample = self.items[idx]
@@ -140,20 +171,27 @@ class DifferentTargetSceneDataset(ImageDataset):
     but was rendered in the same scene as the input image.
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
-                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH):
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
         super(DifferentTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
                                                           target_directions, target_colors, data_path)
         self.items = []
-        for input_sample in self.input_samples:
+        for input_sample in tqdm(self.input_samples):
             for target_sample in self.target_samples:
                 if self._can_be_paired(input_sample, target_sample):
                     ground_truth_sample = self._find_ground_truth_sample_for(input_sample, target_sample)
                     self.items.append(((input_sample, target_sample), ground_truth_sample))
 
         # Transformations to perform on loaded images
-        self.transform = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor()
-        ])
+        if transform is None:
+            self.transform = torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor()
+            ])
+        else:
+            self.transform = torchvision.transforms.Compose([
+                transform,
+                torchvision.transforms.ToTensor()
+            ])
+            
 
     @staticmethod
     def _can_be_paired(input_sample, target_sample):
@@ -177,7 +215,8 @@ class DifferentTargetSceneDataset(ImageDataset):
 
     def __getitem__(self, idx):
         (x, target), ground_truth = self.items[idx]
-        return (Image(x, self.transform), Image(target, self.transform)), Image(ground_truth, self.transform)
+        return (Image(x, self.transform).as_dict(), Image(target, self.transform).as_dict()), \
+               Image(ground_truth, self.transform).as_dict()
 
     def __len__(self):
         return len(self.items)

@@ -2,6 +2,7 @@ papers/
 data/
 trained_models/
 runs/
+.idea/
 
 
 # Byte-compiled / optimized / DLL files

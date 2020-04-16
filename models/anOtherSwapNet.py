@@ -2,14 +2,15 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import torch.nn.functional as F
 
 def downsample_conv(in_planes, out_planes, kernel_size=3):
     return nn.Sequential(
         nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=2, padding=(kernel_size-1)//2),
-        nn.ReLU(inplace=True),
+        nn.LeakyReLU(inplace=True),
         nn.Conv2d(out_planes, out_planes, kernel_size=kernel_size, padding=(kernel_size-1)//2),
-        nn.ReLU(inplace=True)
+        nn.LeakyReLU(inplace=True)
     )
 
 
@@ -23,14 +24,14 @@ def predict_disp(in_planes, out_planes = 1):
 def conv(in_planes, out_planes):
     return nn.Sequential(
         nn.Conv2d(in_planes, out_planes, kernel_size=3, padding=1),
-        nn.ReLU(inplace=True)
+        nn.LeakyReLU(inplace=True)
     )
 
 
 def upconv(in_planes, out_planes):
     return nn.Sequential(
         nn.ConvTranspose2d(in_planes, out_planes, kernel_size=3, stride=2, padding=1, output_padding=1),
-        nn.ReLU(inplace=True)
+        nn.LeakyReLU(inplace=True)
     )
 
 
@@ -167,6 +168,12 @@ class SwapModel(nn.Module):
         self.decoder = Decoder(conv_planes=conv_planes, upconv_planes=upconv_planes)
         self.predicter = Predicter(in_planes=upconv_planes[-1], out_planes=3)     
         self.illuminationPredicter = IlluminationPredicter(in_size = 3, out_reals = 2)
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+                init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    init.zeros_(m.bias)
     def forward(self, x1, x2, x3 = None):
         x1_encoded = self.encoder(x1, skip_links = True)
         x2_encoded = self.encoder(x2, skip_links = False)

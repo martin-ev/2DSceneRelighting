@@ -14,6 +14,15 @@ ALL_LOCATIONS = ["scene_abandonned_city_54", "scene_artic_mountains_32", "scene_
                  "scene_city_24", "scene_fantasy_village_21", "scene_subway_2"]
 ALL_DIRECTIONS = ["NW", "N", "NE", "E", "SE", "S", "SW", "W"]
 ALL_COLORS = ["2500", "3500", "4500", "5500", "6500"]
+ANGLES = {'S': 0,
+          'SE': 45,
+          'E': 90,
+          'NE': 135,
+          'N': 180,
+          'NW': 225,
+          'W': 270,
+          'SW': 315,
+          }
 
 
 class Sample:
@@ -24,8 +33,6 @@ class Sample:
         self.direction = direction
         self.scene = scene
         
-        
-
 
 class Image:
     def __init__(self, sample, transform):
@@ -38,29 +45,20 @@ class Image:
 
     def _load_image(self, file_path):
         img = PILImage.open(file_path)
-        return self.transform(img)[:3,:,:]
+        return self.transform(img)[:3, :, :]
     
     def as_dict(self):
-        dico = {'location' : self.location,
-                'color' : int(self.color),
-                'direction' : self.dir_to_angle(self.direction),
-                'scene' : self.scene,
-                'image' : self.image,
-               }
+        dico = {'location': self.location,
+                'color': int(self.color),
+                'direction': self.dir_to_angle(self.direction),
+                'scene': self.scene,
+                'image': self.image
+                }
         return dico
     
     @staticmethod        
     def dir_to_angle(direction):
-        angles = {'S':0,
-                  'SE':45,
-                  'E':90,
-                  'NE':135,
-                  'N':180,
-                  'NO':225,
-                  'O':270,
-                  'SO':315,              
-                 }
-        return angles[direction]
+        return ANGLES[direction]
 
 
 class ImageDataset(torch.utils.data.Dataset):
@@ -191,7 +189,6 @@ class DifferentTargetSceneDataset(ImageDataset):
                 transform,
                 torchvision.transforms.ToTensor()
             ])
-            
 
     @staticmethod
     def _can_be_paired(input_sample, target_sample):

@@ -172,6 +172,16 @@ class DifferentTargetSceneDataset(ImageDataset):
                  target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
         super(DifferentTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
                                                           target_directions, target_colors, data_path)
+        # Load all ground-truth samples
+        self.ground_truth_samples = {}
+        for location in self.locations:
+            for color in self.target_colors:
+                for direction in self.target_directions:
+                    samples = self._load_samples(data_path, location, color, direction)
+                    for sample in samples:
+                        self.ground_truth_samples[(location, color, direction, sample.scene)] = sample
+                    
+        # Associate (input, target) to correct ground-truth
         self.items = []
         for input_sample in tqdm(self.input_samples):
             for target_sample in self.target_samples:
@@ -202,13 +212,7 @@ class DifferentTargetSceneDataset(ImageDataset):
         color = target_sample.color
         direction = target_sample.direction
 
-        # Find file with the ground-truth image
-        current_dataset = ImageDataset.get_current_dataset(self.data_path, location, color, direction)
-        ground_truth_directory = os.path.join(self.data_path, location, color, direction)
-        ground_truth_image_name = ImageDataset.get_rendered_image_name(current_dataset, scene)
-        ground_truth_file_path = os.path.join(ground_truth_directory, ground_truth_image_name)
-
-        return Sample(ground_truth_file_path, location, color, direction, scene)
+        return self.ground_truth_samples[(location, color, direction, scene)]
 
     def __getitem__(self, idx):
         (x, target), ground_truth = self.items[idx]

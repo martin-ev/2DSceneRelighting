@@ -80,8 +80,8 @@ for epoch in range(1, EPOCHS+1):
 
             # env_map_bundle = torch.cat((relighted_env_map[:3].view(-1, 3, 16, 32),
             #                             gt_env_map[:3].view(-1, 3, 16, 32)), dim=0)
-            writer.add_images('Env-map/Relighted', relighted_env_map[:IMAGES_PER_ROW], epoch)
-            writer.add_images('Env-map/Ground-truth', gt_env_map[:IMAGES_PER_ROW], epoch)
+            writer.add_images('Env-map/Relighted', relighted_env_map[:IMAGES_PER_ROW].view(-1, 3, 16, 32), epoch)
+            writer.add_images('Env-map/Ground-truth', gt_env_map[:IMAGES_PER_ROW].view(-1, 3, 16, 32), epoch)
             # writer.add_image('Visualization/Env-map', make_grid(env_map_bundle, nrow=IMAGES_PER_ROW), epoch)
 
     # Evaluate

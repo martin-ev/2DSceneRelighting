@@ -70,13 +70,13 @@ for epoch in range(1, EPOCHS+1):
 
         # Visualize current progress
         if batch_idx % VISUALIZATION_FREQ == 0:
-            writer.add_image('Visualization/Input', make_grid(x), epoch)
-            writer.add_image('Visualization/Relighted', make_grid(relighted_image), epoch)
-            writer.add_image('Visualization/Ground-truth', make_grid(ground_truth), epoch)
-            writer.add_image('Visualization/Target', make_grid(target), epoch)
+            writer.add_image('Visualization/Input', make_grid(x, nrow=BATCH_SIZE), epoch)
+            writer.add_image('Visualization/Relighted', make_grid(relighted_image, nrow=BATCH_SIZE), epoch)
+            writer.add_image('Visualization/Ground-truth', make_grid(ground_truth, nrow=BATCH_SIZE), epoch)
+            writer.add_image('Visualization/Target', make_grid(target,nrow=BATCH_SIZE), epoch)
 
-            writer.add_image('Env-map/Relighted', make_grid(relighted_env_map.view(-1, 3, 16, 32)), epoch)
-            writer.add_image('Env-map/Ground-truth', make_grid(gt_env_map.view(-1, 3, 16, 32)), epoch)
+            writer.add_image('Env-map/Relighted', make_grid(relighted_env_map.view(-1, 3, 16, 32), nrow=BATCH_SIZE), epoch)
+            writer.add_image('Env-map/Ground-truth', make_grid(gt_env_map.view(-1, 3, 16, 32), nrow=BATCH_SIZE), epoch)
 
     # Evaluate
     model.eval()

@@ -29,4 +29,5 @@ def setup_device(gpu_ids):
     else:
         device = torch.device('cpu')
         print('Cuda NOT available, using CPU!')
+    print(f'Created device: {device}')
     return device

@@ -70,7 +70,7 @@ for epoch in range(1, EPOCHS+1):
         train_loss_env_map += loss2.item()
 
         # Visualize current progress
-        if batch_idx % VISUALIZATION_FREQ:
+        if batch_idx % VISUALIZATION_FREQ == 0:
             image_bundle = torch.cat((x[:3], relighted_image[:3], ground_truth[:3], target[:3]), dim=0)
             print(image_bundle.size())
             writer.add_image('Visualization/Images', make_grid(image_bundle, nrow=IMAGES_PER_ROW), epoch)

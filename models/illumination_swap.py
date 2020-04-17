@@ -195,7 +195,7 @@ class Output(nn.Module):
     def __init__(self, in_channels=64, out_channels=3):
         super(Output, self).__init__()
         self.block = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, out_channels, 3),  # should it be conv or transposed conv?
+            nn.ConvTranspose2d(in_channels, out_channels, 3, padding=1),  # should it be conv or transposed conv?
             nn.GroupNorm(1, out_channels),
             nn.Sigmoid()
         )

@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 TENSORBOARD_LOG_DIR = '/ivrldata1/students/team6/runs'  # specify where logs should be stored
-TENSORBOARD_PORT = 6006  # tensorboard will run on localhost on this port
+TENSORBOARD_PORT = 6116  # tensorboard will run on localhost on this port
 
 
 def generate_run_name(label=None):
@@ -52,7 +52,7 @@ def start_tensorboard_process():
     # https://stackoverflow.com/a/4791612
     tensorboard_process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
     print(f'Tensorboard is now running. To access it on your local computer at localhost:{TENSORBOARD_PORT} run:')
-    print(f'    ssh - N - f - L localhost:{TENSORBOARD_PORT}:localhost:{TENSORBOARD_PORT} '
+    print(f'    ssh -N -f -L localhost:{TENSORBOARD_PORT}:localhost:{TENSORBOARD_PORT} '
           f'{get_logged_in_user_name()}@iccluster134.iccluster.epfl.ch')
     return tensorboard_process
 

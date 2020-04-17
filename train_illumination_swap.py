@@ -71,8 +71,12 @@ for epoch in range(1, EPOCHS+1):
             writer.add_image('Visualization/Prediction', make_grid(relighted_image, nrow=BATCH_SIZE), epoch)
             writer.add_image('Visualization/Ground-truth', make_grid(ground_truth, nrow=BATCH_SIZE), epoch)
 
-            writer.add_image('Visualization/Env-map of ground-truth', gt_env_map.view(-1, 3, 16, 32), epoch)
-            writer.add_image('Visualization/Env-map of prediction', relighted_env_map.view(-1, 3, 16, 32), epoch)
+            writer.add_image('Visualization/Env-map of ground-truth',
+                             make_grid(gt_env_map.view(-1, 3, 16, 32), nrow=BATCH_SIZE),
+                             epoch)
+            writer.add_image('Visualization/Env-map of prediction',
+                             make_grid(relighted_env_map.view(-1, 3, 16, 32), nrow=BATCH_SIZE),
+                             epoch)
 
     # Evaluate
     model.eval()

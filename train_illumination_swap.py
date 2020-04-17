@@ -12,14 +12,14 @@ from utils.device import setup_device
 
 
 # Get used device
-GPU_IDS = [2]
+GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
 NAME = 'illumination_swap_only_abandonned_6500'
 BATCH_SIZE = 25
-NUM_WORKERS = 4
-EPOCHS = 50
+NUM_WORKERS = 8
+EPOCHS = 25
 
 # Configure training objects
 model = IlluminationSwapNet().to(device)

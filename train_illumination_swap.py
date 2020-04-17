@@ -41,7 +41,6 @@ dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_worker
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 
-IMAGES_PER_ROW = 3
 # writer.add_text('Visualization/Images', 'Following rows are: input, relighted image, ground-truth and target')
 # writer.add_text('Visualization/Env-map', 'Env-maps for relighted image (top) and ground-truth (bottom)')
 
@@ -71,18 +70,13 @@ for epoch in range(1, EPOCHS+1):
 
         # Visualize current progress
         if batch_idx % VISUALIZATION_FREQ == 0:
-            # image_bundle = torch.cat((x[:3], relighted_image[:3], ground_truth[:3], target[:3]), dim=0)
-            writer.add_images('Visualization/Input', x[:IMAGES_PER_ROW], epoch)
-            writer.add_images('Visualization/Relighted', relighted_image[:IMAGES_PER_ROW], epoch)
-            writer.add_images('Visualization/Ground-truth', ground_truth[:IMAGES_PER_ROW], epoch)
-            writer.add_images('Visualization/Target', target[:IMAGES_PER_ROW], epoch)
-            # writer.add_image('Visualization/Images', make_grid(image_bundle, nrow=IMAGES_PER_ROW), epoch)
+            writer.add_image('Visualization/Input', make_grid(x), epoch)
+            writer.add_image('Visualization/Relighted', make_grid(relighted_image), epoch)
+            writer.add_image('Visualization/Ground-truth', make_grid(ground_truth), epoch)
+            writer.add_image('Visualization/Target', make_grid(target), epoch)
 
-            # env_map_bundle = torch.cat((relighted_env_map[:3].view(-1, 3, 16, 32),
-            #                             gt_env_map[:3].view(-1, 3, 16, 32)), dim=0)
-            writer.add_images('Env-map/Relighted', relighted_env_map[:IMAGES_PER_ROW].view(-1, 3, 16, 32), epoch)
-            writer.add_images('Env-map/Ground-truth', gt_env_map[:IMAGES_PER_ROW].view(-1, 3, 16, 32), epoch)
-            # writer.add_image('Visualization/Env-map', make_grid(env_map_bundle, nrow=IMAGES_PER_ROW), epoch)
+            writer.add_image('Env-map/Relighted', make_grid(relighted_env_map.view(-1, 3, 16, 32)), epoch)
+            writer.add_image('Env-map/Ground-truth', make_grid(gt_env_map.view(-1, 3, 16, 32)), epoch)
 
     # Evaluate
     model.eval()

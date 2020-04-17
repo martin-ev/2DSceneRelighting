@@ -44,7 +44,7 @@ print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
-VISUALIZATION_FREQ = DATASET_SIZE // 10  # every how many batches tensorboard is updated with new images
+VISUALIZATION_FREQ = DATASET_SIZE // BATCH_SIZE // 10  # every how many batches tensorboard is updated with new images
 print(f'{SHOWN_SAMPLES} samples will be visualized every {VISUALIZATION_FREQ} batches.')
 
 # Train loop

@@ -221,3 +221,23 @@ class DifferentTargetSceneDataset(ImageDataset):
 
     def __len__(self):
         return len(self.items)
+
+
+class OneSampleDifferentTargetSceneDataset(DifferentTargetSceneDataset):
+    """
+    Dataset that loads only one sample of ((image, target), ground-truth) tuple. Can be used to check if network is
+    able to overfit given only one sample.
+    """
+    def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
+        super(OneSampleDifferentTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
+                                                                   target_directions, target_colors, data_path,
+                                                                   transform)
+
+    def __getitem__(self, idx):
+        (x, target), ground_truth = self.items[0]
+        return (Image(x, self.transform).as_dict(), Image(target, self.transform).as_dict()), \
+               Image(ground_truth, self.transform).as_dict()
+
+    def __len__(self):
+        return 1

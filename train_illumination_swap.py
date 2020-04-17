@@ -17,9 +17,9 @@ device = setup_device(GPU_IDS)
 
 # Parameters
 NAME = 'illumination_swap_only_abandonned_6500'
-BATCH_SIZE = 25
-NUM_WORKERS = 8
-EPOCHS = 25
+BATCH_SIZE = 1
+NUM_WORKERS = 1
+EPOCHS = 25000
 
 # Configure training objects
 model = IlluminationSwapNet().to(device)
@@ -30,10 +30,10 @@ reconstruction_loss = nn.L1Loss()
 env_map_loss = log_l2_loss
 
 # Configure dataloader
-dataset = dataset.DifferentTargetSceneDataset(locations=['scene_abandonned_city_54'],
-                                              input_colors=['6500'],
-                                              target_colors=['6500'],
-                                              transform=Resize(256))
+dataset = dataset.OneSampleDifferentTargetSceneDataset(locations=['scene_abandonned_city_54'],
+                                                       input_colors=['6500'],
+                                                       target_colors=['6500'],
+                                                       transform=Resize(256))
 dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 DATASET_SIZE = len(dataset)
 print(f'Dataset contains {DATASET_SIZE} samples.')
@@ -44,6 +44,7 @@ writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
 VISUALIZATION_FREQ = DATASET_SIZE // 4  # every how many batches tensorboard is updated with new images
+VISUALIZATION_FREQ_EPOCH = 1000
 print(f'{SHOWN_SAMPLES} samples will be visualized every {VISUALIZATION_FREQ} batches.')
 
 # Train loop
@@ -72,7 +73,7 @@ for epoch in range(1, EPOCHS+1):
         train_loss_env_map += loss2.item()
 
         # Visualize current progress
-        if batch_idx % VISUALIZATION_FREQ == 0:
+        if epoch % VISUALIZATION_FREQ_EPOCH == 0:
             writer.add_image('Visualization/1-Input', make_grid(x[:SHOWN_SAMPLES]), epoch)
             writer.add_image('Visualization/2-Relighted', make_grid(relighted_image[:SHOWN_SAMPLES]), epoch)
             writer.add_image('Visualization/3-Ground-truth', make_grid(ground_truth[:SHOWN_SAMPLES]), epoch)

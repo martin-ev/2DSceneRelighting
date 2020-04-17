@@ -6,6 +6,7 @@ from torchvision.utils import make_grid
 
 from models.illumination_swap import IlluminationSwapNet
 from models.loss import log_l2_loss
+from tqdm import tqdm
 from utils import dataset, storage, tensorboard
 from utils.device import setup_device
 
@@ -48,7 +49,8 @@ print(f'{SHOWN_SAMPLES} samples will be visualized every {VISUALIZATION_FREQ} ba
 # Train loop
 for epoch in range(1, EPOCHS+1):
     train_loss, train_loss_reconstruction, train_loss_env_map = 0, 0, 0
-    for batch_idx, batch in enumerate(dataloader):
+    print(f'Epoch {epoch}:')
+    for batch_idx, batch in tqdm(enumerate(dataloader)):
         x = batch[0][0]['image'].to(device)
         target = batch[0][1]['image'].to(device)
         ground_truth = batch[1]['image'].to(device)

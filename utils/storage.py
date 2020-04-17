@@ -1,11 +1,12 @@
 import torch
+import os
 
 
 TRAINED_MODELS_PATH = "/ivrldata1/students/team6/2DSceneRelighting/trained_models"
 
 
 def build_full_path(name):
-    return TRAINED_MODELS_PATH+"/"+name+".pth"
+    return os.path.join(TRAINED_MODELS_PATH, name + '.pth')
 
 
 def save_trained(model, name):

@@ -293,16 +293,22 @@ class IlluminationSwapNet(nn.Module):
         self.encode = Encoder()
         self.decode = Decoder()
 
-    def forward(self, image, target):
+    def forward(self, image, target, ground_truth):
         # pass image through encoder
-        _ = self.encode(image)
+        image_env_map = self.encode(image)
         image_skip_connections = self.encode.get_skip_connections()
 
         # pass target through encoder
         target_env_map = self.encode(target)
 
+        # pass ground-truth through encoder
+        ground_truth_env_map = self.encode(ground_truth)
+
         # decode image with target env map
-        image_relighted = self.decode(target_env_map, image_skip_connections)
+        relighted_image = self.decode(target_env_map, image_skip_connections)
         # can also add target relighting here
 
-        return image_relighted
+        # pass relighted image second time through the network to get its env map
+        relighted_env_map = self.encode(relighted_image)
+
+        return relighted_image, relighted_env_map, ground_truth_env_map

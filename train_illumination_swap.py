@@ -11,7 +11,7 @@ from utils.device import setup_device
 
 
 # Get used device
-GPU_IDS = [0]
+GPU_IDS = [2]
 device = setup_device(GPU_IDS)
 
 # Parameters
@@ -50,7 +50,7 @@ for epoch in range(1, EPOCHS+1):
 
         # Forward
         model.train()
-        relighted_image, relighted_env_map, gt_env_map = model(x, target)
+        relighted_image, relighted_env_map, gt_env_map = model(x, target, ground_truth)
         loss1 = reconstruction_loss(relighted_image, ground_truth)
         loss2 = env_map_loss(relighted_env_map, gt_env_map)
         loss = loss1 + loss2

@@ -17,10 +17,10 @@ device = setup_device(GPU_IDS)
 
 # Parameters
 NAME = 'illumination_swap_only_abandonned_6500'
-BATCH_SIZE = 5
+BATCH_SIZE = 10
 NUM_WORKERS = 4
 EPOCHS = 50
-VISUALIZATION_FREQ = 100  # every how many batches tensorboard is updated with new images
+VISUALIZATION_FREQ = 5000  # every how many batches tensorboard is updated with new images
 
 # Configure training objects
 model = IlluminationSwapNet().to(device)

@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -40,6 +41,10 @@ dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_worker
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 
+IMAGES_PER_ROW = 3
+writer.add_text('Visualization/Images', 'Following rows are: input, relighted image, ground-truth and target')
+writer.add_text('Visualization/Env-map', 'Env-maps for relighted image (top) and ground-truth (bottom)')
+
 # Train loop
 for epoch in range(1, EPOCHS+1):
     train_loss, train_loss_reconstruction, train_loss_env_map = 0, 0, 0
@@ -66,17 +71,12 @@ for epoch in range(1, EPOCHS+1):
 
         # Visualize current progress
         if batch_idx % VISUALIZATION_FREQ:
-            writer.add_image('Visualization/Input', make_grid(x, nrow=BATCH_SIZE), epoch)
-            writer.add_image('Visualization/Target', make_grid(target, nrow=BATCH_SIZE), epoch)
-            writer.add_image('Visualization/Prediction', make_grid(relighted_image, nrow=BATCH_SIZE), epoch)
-            writer.add_image('Visualization/Ground-truth', make_grid(ground_truth, nrow=BATCH_SIZE), epoch)
+            image_bundle = torch.cat((x[:3], relighted_image[:3], ground_truth[:3], target[:3]), dim=0)
+            writer.add_image('Visualization/Images', make_grid(image_bundle, nrow=IMAGES_PER_ROW), epoch)
 
-            writer.add_image('Visualization/Env-map of ground-truth',
-                             make_grid(gt_env_map.view(-1, 3, 16, 32), nrow=BATCH_SIZE),
-                             epoch)
-            writer.add_image('Visualization/Env-map of prediction',
-                             make_grid(relighted_env_map.view(-1, 3, 16, 32), nrow=BATCH_SIZE),
-                             epoch)
+            env_map_bundle = torch.cat((relighted_env_map[:3].view(-1, 3, 16, 32),
+                                        gt_env_map[:3].view(-1, 3, 16, 32)), dim=0)
+            writer.add_image('Visualization/Env-map', make_grid(env_map_bundle, nrow=IMAGES_PER_ROW), epoch)
 
     # Evaluate
     model.eval()

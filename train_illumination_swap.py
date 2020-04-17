@@ -72,6 +72,7 @@ for epoch in range(1, EPOCHS+1):
         # Visualize current progress
         if batch_idx % VISUALIZATION_FREQ:
             image_bundle = torch.cat((x[:3], relighted_image[:3], ground_truth[:3], target[:3]), dim=0)
+            print(image_bundle.size())
             writer.add_image('Visualization/Images', make_grid(image_bundle, nrow=IMAGES_PER_ROW), epoch)
 
             env_map_bundle = torch.cat((relighted_env_map[:3].view(-1, 3, 16, 32),

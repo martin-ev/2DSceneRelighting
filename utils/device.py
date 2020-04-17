@@ -2,12 +2,13 @@ import torch
 import os
 
 
-DEFAULT_GPU = 0
+DEFAULT_GPU = 2
 
 
-def setup_device(gpu_ids=[0]):
+def setup_device(gpu_ids):
     """
     Creates a torch.device
+    WARNING: this won't work for multiple GPUs FIXME
     @param gpu_ids: ID(s) (list of integers) of the GPU(s) that should be used if they're available
     @return: device which can be used e.g. for torch.Tensor.to(<device>)
     """
@@ -23,7 +24,7 @@ def setup_device(gpu_ids=[0]):
             gpu_ids_string = f'{DEFAULT_GPU}'
     if torch.cuda.is_available():
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids_string
-        device = torch.device('cuda')
+        device = torch.device(f'cuda:{gpu_ids_string}')
         print(f'Cuda available, using GPU: {gpu_ids_string}')
     else:
         device = torch.device('cpu')

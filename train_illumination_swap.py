@@ -14,6 +14,7 @@ from utils.device import setup_device
 # Get used device
 GPU_IDS = [2]
 device = setup_device(GPU_IDS)
+print(f'Created device: {device}')
 
 # Parameters
 NAME = 'illumination_swap_only_abandonned_6500'

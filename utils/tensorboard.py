@@ -53,7 +53,7 @@ def start_tensorboard_process():
     tensorboard_process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)
     print(f'Tensorboard is now running. To access it on your local computer at localhost:{TENSORBOARD_PORT} run:')
     print(f'    ssh - N - f - L localhost:{TENSORBOARD_PORT}:localhost:{TENSORBOARD_PORT} '
-          f'{get_logged_in_user_name()}@iccluster135.iccluster.epfl.ch')
+          f'{get_logged_in_user_name()}@iccluster134.iccluster.epfl.ch')
     return tensorboard_process
 
 

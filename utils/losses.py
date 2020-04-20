@@ -63,6 +63,3 @@ class SceneLatentLoss(_SimpleLossWithRef):
 class LightLatentLoss(_SimpleLossWithRef):    
     def __init__(self, p=2):
         super().__init__(p=p)
-    
-
-            

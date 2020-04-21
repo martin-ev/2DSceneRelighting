@@ -159,7 +159,7 @@ class SwapModel(nn.Module):
                 init.xavier_uniform_(m.weight)
                 if m.bias is not None:
                     init.zeros_(m.bias)
-    def forward(self, x1, x2, x3 = None):
+    def forward(self, x1, x2, x3 = None, encode_pred = False):
         x1_encoded = self.encoder(x1, skip_links = True)
         x2_encoded = self.encoder(x2, skip_links = False)
         o1, o2, o3, latent_x1 = x1_encoded
@@ -178,7 +178,20 @@ class SwapModel(nn.Module):
             ill_pred_x1 = self.illuminationPredicter(illumination_x1)
             ill_pred_x2 = self.illuminationPredicter(illumination_x2)
             ill_pred_x3 = self.illuminationPredicter(illumination_x3)
-            return scene_x3, scene_x1, scene_x2, \
-                   illumination_x3, illumination_x1, illumination_x2, \
-                   ill_pred_x3, ill_pred_x1, ill_pred_x2, \
-                   pred
+            if not encode_pred:
+                return scene_x3, scene_x1, scene_x2, \
+                       illumination_x3, illumination_x1, illumination_x2, \
+                       ill_pred_x3, ill_pred_x1, ill_pred_x2, \
+                       pred
+            else :
+                pred_encoded = self.encoder(pred, skip_links = True)
+                o1_, o2_, o3_, latent_pred = pred_encoded
+                illumination_pred, scene_pred = self.spliter(latent_pred)
+                latent_reswapped = self.swaper(latent_pred, latent_x1)
+                out2 = self.decoder(x1, o1, o2, o3, latent_reswapped)
+                pred2 = self.predicter(out2)
+                return scene_x3, scene_x1, scene_x2, scene_pred,\
+                       illumination_x3, illumination_x1, illumination_x2, illumination_pred,\
+                       ill_pred_x3, ill_pred_x1, ill_pred_x2, \
+                       pred, pred2
+                

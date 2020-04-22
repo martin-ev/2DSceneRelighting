@@ -11,20 +11,20 @@ def cos_loss(a1, a2):
     return torch.mean(1. - torch.cos((a1 - a2)/180.*pi))
 
 _DISTANCES = {
-    "cos" : cos_loss
-    "logL2": log_l2_loss
+    "cos" : cos_loss,
+    "logL2": log_l2_loss,
     1 : nn.L1Loss(),
     2 : nn.MSELoss()
 }
 
 _FACTORS = {
-    "cos" : lambda f : 1.
-    "logL2": lambda f : 1.
-    1 : lambda f : f
+    "cos" : lambda f : 1.,
+    "logL2": lambda f : 1.,
+    1 : lambda f : f,
     2 : lambda f : f**2
 }
 
-class _Loss(nn.module):    
+class _Loss(nn.Module):    
     def __init__(self):
         super(_Loss, self).__init__()
 
@@ -40,7 +40,7 @@ class _SimpleLossWithRef(_SimpleLoss):
     def __init__(self, p=2):
         super().__init__(p=p, factor=1.)
     def forward(self, prediction, groundtruth, ref1, ref2):
-        return super()(prediction, groundtruth)/super()(ref1, ref2)
+        return super().forward(prediction, groundtruth)/super().forward(ref1, ref2)
     
 class ReconstructionLoss(_SimpleLoss):    
     def __init__(self, p=2):

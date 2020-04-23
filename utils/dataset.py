@@ -217,7 +217,7 @@ class InputTargetGroundtruthDataset(ImageDataset):
         print("- Loading ground-truth samples")
         self.pairing_strategies = [] if pairing_strategies is None else pairing_strategies
         self.ground_truth_samples = {}
-        for sample in self.target_sample:
+        for sample in self.target_samples:
             self.ground_truth_samples[(sample.location, sample.color, sample.direction, sample.scene)] = sample
                    
         # Associate (input, target) to correct ground-truth

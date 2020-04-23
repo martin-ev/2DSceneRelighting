@@ -18,10 +18,10 @@ _DISTANCES = {
 }
 
 _FACTORS = {
-    "cos" : lambda f : 1.,
-    "logL2": lambda f : 1.,
-    1 : lambda f : f,
-    2 : lambda f : f**2
+    "cos": lambda f: 1.,
+    "logL2": lambda f: 1.,
+    1: lambda f: f,
+    2: lambda f: f**2
 }
 
 class _Loss(nn.Module):    

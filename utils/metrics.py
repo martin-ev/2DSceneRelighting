@@ -5,15 +5,13 @@ import numpy as np
 import cv2
 
 
-class PSNR:
+def psnr(img1, img2):
     """
     Peak Signal to Noise Ratio
     Inputs are expected to be in range [0, 255]
     """
-    @staticmethod
-    def __call__(img1, img2):
-        mse = torch.mean((img1 - img2) ** 2)
-        return 20 * torch.log10(255.0 / torch.sqrt(mse))  # FIXME: types mismatch
+    mse = torch.mean((img1 - img2) ** 2)
+    return 20 * torch.log10(255.0 / torch.sqrt(mse))
 
 
 class SSIM:

@@ -11,8 +11,8 @@ from models.loss import log_l2_loss
 from tqdm import tqdm
 from utils.dataset import InputTargetGroundtruthDataset, DifferentScene, DifferentLightDirection
 from utils.storage import save_trained
-from utils.tensorboard import start_tensorboard_process, stop_tensorboard_process, setup_summary_writer
 from utils.device import setup_device
+from utils import tensorboard
 
 
 # Get used device
@@ -65,8 +65,8 @@ def unpack_batch(data_batch):
 
 
 # Configure tensorboard
-writer = setup_summary_writer(NAME)
-tensorboard_process = start_tensorboard_process()
+writer = tensorboard.setup_summary_writer(NAME)
+tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
 TRAIN_VISUALIZATION_FREQ = TRAIN_DATASET_SIZE // BATCH_SIZE // 10
 print(f'{SHOWN_SAMPLES} samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
@@ -162,4 +162,4 @@ for epoch in range(1, EPOCHS+1):
 save_trained(model, NAME)
 
 # Terminate tensorboard
-stop_tensorboard_process(tensorboard_process)
+tensorboard.stop_tensorboard_process(tensorboard_process)

@@ -80,19 +80,22 @@ class ImageDataset(torch.utils.data.Dataset):
 
         # Load input and target samples
         self.input_samples, self.target_samples = [], []
-        for location in self.locations:
-            for color in self.input_colors:
-                for direction in self.input_directions:
-                    self.input_samples += self._load_samples(data_path, location, color, direction)
-            for color in self.target_colors:
-                for direction in self.target_directions:
-                    self.target_samples += self._load_samples(data_path, location, color, direction)
-
+        for location in tqdm(self.locations):
+            if self.exists(data_path,location):
+                for color in self.input_colors:
+                    for direction in self.input_directions:
+                        self.input_samples += self._load_samples(data_path, location, color, direction)
+                for color in self.target_colors:
+                    for direction in self.target_directions:
+                        self.target_samples += self._load_samples(data_path, location, color, direction)
+    
     def _load_all_scenes(self, data_path):
+        print(" - - Loading all scenes")
         all_scenes = []
-        for location in self.locations:
-            file = os.path.join(data_path, location, "dataset.csv")
-            all_scenes += pd.read_csv(file)['scene'].drop_duplicates().tolist()
+        for location in tqdm(self.locations):
+            if self.exists(data_path,location):
+                file = os.path.join(data_path, location, "dataset.csv")
+                all_scenes += pd.read_csv(file)['scene'].drop_duplicates().tolist()
         return all_scenes
 
     def _load_samples(self, data_path, location, color, direction):
@@ -102,8 +105,13 @@ class ImageDataset(torch.utils.data.Dataset):
         samples = []
         for scene in self.scenes:
             rendered_image_name = self.get_rendered_image_name(current_dataset, scene)
-            samples.append(Sample(os.path.join(directory, rendered_image_name), location, color, direction, scene))
+            if rendered_image_name:
+                samples.append(Sample(os.path.join(directory, rendered_image_name), location, color, direction, scene))
         return samples
+    
+    @staticmethod
+    def exists(data_path, location):
+        return os.path.exists(data_path+location) or os.path.exists(data_path+"/"+location)
 
     @staticmethod
     def get_current_dataset(data_path, location, color, direction):
@@ -117,7 +125,7 @@ class ImageDataset(torch.utils.data.Dataset):
         if len(rendered_image) == 1:
             image_name = rendered_image.values[0]
             return image_name
-        else:
+        elif len(rendered_image) > 1:
             raise RuntimeError(f'Specified scene {scene} exists multiple times in the dataset')
 
     def __getitem__(self, idx):
@@ -170,18 +178,23 @@ class DifferentTargetSceneDataset(ImageDataset):
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
                  target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
+        print("Initialising Dataset")
+        print("- Loading input and target samples")
         super(DifferentTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
                                                           target_directions, target_colors, data_path)
         # Load all ground-truth samples
+        print("- Loading ground-truth samples")
         self.ground_truth_samples = {}
-        for location in self.locations:
-            for color in self.target_colors:
-                for direction in self.target_directions:
-                    samples = self._load_samples(data_path, location, color, direction)
-                    for sample in samples:
-                        self.ground_truth_samples[(location, color, direction, sample.scene)] = sample
-                    
+        for location in tqdm(self.locations):
+            if self.exists(data_path,location):
+                for color in self.target_colors:
+                    for direction in self.target_directions:
+                        samples = self._load_samples(data_path, location, color, direction)
+                        for sample in samples:
+                            self.ground_truth_samples[(location, color, direction, sample.scene)] = sample
+                   
         # Associate (input, target) to correct ground-truth
+        print("- Associating input, target and ground-truth samples") 
         self.items = []
         for input_sample in tqdm(self.input_samples):
             for target_sample in self.target_samples:
@@ -190,6 +203,7 @@ class DifferentTargetSceneDataset(ImageDataset):
                     self.items.append(((input_sample, target_sample), ground_truth_sample))
 
         # Transformations to perform on loaded images
+        print("- Finishing initialising Dataset")
         if transform is None:
             self.transform = torchvision.transforms.Compose([
                 torchvision.transforms.ToTensor()

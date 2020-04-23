@@ -1,16 +1,13 @@
 import torch
-import torchvision as tv
 import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
 from torchvision.utils import make_grid
 
-from utils.storage import save_trained, load_trained
+from utils.storage import save_trained
 from utils.device import setup_device
 import utils.tensorboard as tensorboard
 
-from utils.dataset import DifferentTargetSceneDataset
+from utils.dataset import InputTargetGroundtruthDataset, DifferentScene
 from torch.utils.data import DataLoader
 
 from models.anOtherSwapNetSmaller import SwapModel
@@ -35,7 +32,8 @@ optimizer = torch.optim.Adam(model.parameters(), weight_decay=0)
 distance = nn.MSELoss().to(device)
 
 # Configure dataloader
-train_dataset = DifferentTargetSceneDataset(transform=transforms.Resize(SIZE))
+train_dataset = InputTargetGroundtruthDataset(transform=transforms.Resize(SIZE),
+                                              pairing_strategies=[DifferentScene()])
 train_dataloader  = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 DATASET_SIZE = len(train_dataset)
 print(f'Dataset contains {DATASET_SIZE} samples.')
@@ -45,7 +43,7 @@ print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
-VISUALIZATION_FREQ = 100 #DATASET_SIZE // BATCH_SIZE // 10  # every how many batches tensorboard is updated with new images
+VISUALIZATION_FREQ = 100 # every how many batches tensorboard is updated with new images
 print(f'{SHOWN_SAMPLES} samples will be visualized every {VISUALIZATION_FREQ} batches.')
 
 # Train loop
@@ -108,8 +106,8 @@ for epoch in range(1, EPOCHS+1):
             print ('Sub-loss/1-Loss:', sub_train_loss, 'Sub-score/1-Score:', sub_train_score)
             sub_train_loss = 0.
             sub_train_score = 0.
-        
-       
+
+
     # Evaluate
     model.eval()
     # TODO: Add test set evaluation here
@@ -119,7 +117,7 @@ for epoch in range(1, EPOCHS+1):
     writer.add_scalar('Score/1-Score', train_loss, epoch)
 
 # Store trained model
-storage.save_trained(model, NAME)
+save_trained(model, NAME)
 
 # Terminate tensorboard
 tensorboard.stop_tensorboard_process(tensorboard_process)

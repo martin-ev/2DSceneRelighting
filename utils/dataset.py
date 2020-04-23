@@ -2,6 +2,8 @@ import pandas as pd
 import os
 import torch
 import torchvision
+
+from abc import ABC, abstractmethod  # https://www.python-course.eu/python3_abstract_classes.php
 from PIL import Image as PILImage
 from tqdm import tqdm
 
@@ -81,7 +83,7 @@ class ImageDataset(torch.utils.data.Dataset):
         # Load input and target samples
         self.input_samples, self.target_samples = [], []
         for location in tqdm(self.locations):
-            if self.exists(data_path,location):
+            if self.exists(data_path, location):
                 for color in self.input_colors:
                     for direction in self.input_directions:
                         self.input_samples += self._load_samples(data_path, location, color, direction)
@@ -93,7 +95,7 @@ class ImageDataset(torch.utils.data.Dataset):
         print(" - - Loading all scenes")
         all_scenes = []
         for location in tqdm(self.locations):
-            if self.exists(data_path,location):
+            if self.exists(data_path, location):
                 file = os.path.join(data_path, location, "dataset.csv")
                 all_scenes += pd.read_csv(file)['scene'].drop_duplicates().tolist()
         return all_scenes
@@ -111,7 +113,7 @@ class ImageDataset(torch.utils.data.Dataset):
     
     @staticmethod
     def exists(data_path, location):
-        return os.path.exists(data_path+location) or os.path.exists(data_path+"/"+location)
+        return os.path.exists(os.path.join(data_path, location))
 
     @staticmethod
     def get_current_dataset(data_path, location, color, direction):
@@ -170,28 +172,53 @@ class SameTargetSceneDataset(ImageDataset):
         return len(self.items)
 
 
-class DifferentTargetSceneDataset(ImageDataset):
+class PairingStrategy(ABC):
     """
-    Dataset that loads ((input, target), ground-truth) tuples for which input and target are from different scenes.
+    Abstract class to be extend by concrete implementations with sample pairing rules defined in can_be_paired method.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def can_be_paired(self, input_sample, target_sample):
+        pass
+
+
+class DifferentScene(PairingStrategy):
+    def __init__(self):
+        super(DifferentScene, self).__init__()
+
+    def can_be_paired(self, input_sample, target_sample):
+        return input_sample.scene != target_sample.scene
+
+
+class DifferentLightDirection(PairingStrategy):
+    def __init__(self):
+        super(DifferentLightDirection, self).__init__()
+
+    def can_be_paired(self, input_sample, target_sample):
+        return input_sample.direction != target_sample.direction
+
+
+class InputTargetGroundtruthDataset(ImageDataset):
+    """
+    Dataset that loads ((input, target), ground-truth) tuples.
     In the returned tuple the ground truth image has the same light conditions (direction and color) as target image,
     but was rendered in the same scene as the input image.
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
-                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None,
+                 pairing_strategies=None):
         print("Initialising Dataset")
         print("- Loading input and target samples")
-        super(DifferentTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
-                                                          target_directions, target_colors, data_path)
+        super(InputTargetGroundtruthDataset, self).__init__(locations, scenes, input_directions, input_colors,
+                                                            target_directions, target_colors, data_path)
         # Load all ground-truth samples
         print("- Loading ground-truth samples")
+        self.pairing_strategies = [] if pairing_strategies is None else pairing_strategies
         self.ground_truth_samples = {}
-        for location in tqdm(self.locations):
-            if self.exists(data_path,location):
-                for color in self.target_colors:
-                    for direction in self.target_directions:
-                        samples = self._load_samples(data_path, location, color, direction)
-                        for sample in samples:
-                            self.ground_truth_samples[(location, color, direction, sample.scene)] = sample
+        for sample in self.target_sample:
+            self.ground_truth_samples[(sample.location, sample.color, sample.direction, sample.scene)] = sample
                    
         # Associate (input, target) to correct ground-truth
         print("- Associating input, target and ground-truth samples") 
@@ -214,9 +241,11 @@ class DifferentTargetSceneDataset(ImageDataset):
                 torchvision.transforms.ToTensor()
             ])
 
-    @staticmethod
-    def _can_be_paired(input_sample, target_sample):
-        return input_sample.scene != target_sample.scene
+    def _can_be_paired(self, input_sample, target_sample):
+        for strategy in self.pairing_strategies:
+            if not strategy.can_be_paired(input_sample, target_sample):
+                return False
+        return True
 
     def _find_ground_truth_sample_for(self, input_sample, target_sample):
         # Localization same as for the input sample
@@ -237,16 +266,17 @@ class DifferentTargetSceneDataset(ImageDataset):
         return len(self.items)
 
 
-class OneSampleDifferentTargetSceneDataset(DifferentTargetSceneDataset):
+class OneInputTargetGroundtruthDataset(InputTargetGroundtruthDataset):
     """
     Dataset that loads only one sample of ((image, target), ground-truth) tuple. Can be used to check if network is
     able to overfit given only one sample.
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
-                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
-        super(OneSampleDifferentTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
-                                                                   target_directions, target_colors, data_path,
-                                                                   transform)
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None,
+                 pairing_strategies=None):
+        super(OneInputTargetGroundtruthDataset, self).__init__(locations, scenes, input_directions, input_colors,
+                                                               target_directions, target_colors, data_path,
+                                                               transform, pairing_strategies)
 
     def __getitem__(self, idx):
         (x, target), ground_truth = self.items[0]

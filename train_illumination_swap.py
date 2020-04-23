@@ -7,7 +7,9 @@ from torchvision.utils import make_grid
 from models.illumination_swap import IlluminationSwapNet
 from models.loss import log_l2_loss
 from tqdm import tqdm
-from utils import dataset, storage, tensorboard
+from utils.dataset import InputTargetGroundtruthDataset, DifferentScene, DifferentLightDirection
+from utils.storage import save_trained
+from utils.tensorboard import start_tensorboard_process, stop_tensorboard_process, setup_summary_writer
 from utils.device import setup_device
 
 
@@ -31,18 +33,19 @@ reconstruction_loss = nn.L1Loss()
 env_map_loss = log_l2_loss
 
 # Configure dataloader
-dataset = dataset.DifferentTargetSceneDataset(locations=['scene_abandonned_city_54'],
-                                              input_colors=['6500'],
-                                              target_colors=['6500'],
-                                              transform=Resize(SIZE))
+dataset = InputTargetGroundtruthDataset(locations=['scene_abandonned_city_54'],
+                                        input_colors=['6500'],
+                                        target_colors=['6500'],
+                                        transform=Resize(SIZE),
+                                        pairing_strategies=[DifferentScene(), DifferentLightDirection()])
 dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 DATASET_SIZE = len(dataset)
 print(f'Dataset contains {DATASET_SIZE} samples.')
 print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 
 # Configure tensorboard
-writer = tensorboard.setup_summary_writer(NAME)
-tensorboard_process = tensorboard.start_tensorboard_process()
+writer = setup_summary_writer(NAME)
+tensorboard_process = start_tensorboard_process()
 SHOWN_SAMPLES = 3
 VISUALIZATION_FREQ = DATASET_SIZE // BATCH_SIZE // 10  # every how many batches tensorboard is updated with new images
 print(f'{SHOWN_SAMPLES} samples will be visualized every {VISUALIZATION_FREQ} batches.')
@@ -95,7 +98,7 @@ for epoch in range(1, EPOCHS+1):
     }, epoch)
 
 # Store trained model
-storage.save_trained(model, NAME)
+save_trained(model, NAME)
 
 # Terminate tensorboard
-tensorboard.stop_tensorboard_process(tensorboard_process)
+stop_tensorboard_process(tensorboard_process)

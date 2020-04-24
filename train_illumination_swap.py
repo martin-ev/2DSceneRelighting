@@ -9,7 +9,7 @@ from utils.metrics import psnr
 from models.illumination_swap import IlluminationSwapNet
 from models.loss import log_l2_loss
 from tqdm import tqdm
-from utils.dataset import InputTargetGroundtruthDataset, DifferentScene, DifferentLightDirection
+from utils.dataset import InputTargetGroundtruthDataset, DifferentScene, DifferentLightDirection, VALIDATION_DATA_PATH
 from utils.storage import save_trained
 from utils.device import setup_device
 from utils import tensorboard
@@ -46,7 +46,8 @@ transform = Resize(SIZE)
 pairing_strategies = [DifferentScene(), DifferentLightDirection()]
 train_dataset = InputTargetGroundtruthDataset(transform=transform,
                                               pairing_strategies=pairing_strategies)
-test_dataset = InputTargetGroundtruthDataset(transform=transform,
+test_dataset = InputTargetGroundtruthDataset(data_path=VALIDATION_DATA_PATH,
+                                             transform=transform,
                                              pairing_strategies=pairing_strategies)
 train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)

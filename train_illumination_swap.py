@@ -12,7 +12,7 @@ from models.loss import log_l2_loss
 from tqdm import tqdm
 from utils.dataset import InputTargetGroundtruthDataset, DifferentScene, DifferentLightDirection, VALIDATION_DATA_PATH
 from utils.storage import save_trained
-from utils.device import setup_device
+from utils.device import setup_device, print_memory_summary
 from utils import tensorboard
 
 
@@ -22,8 +22,8 @@ device = setup_device(GPU_IDS)
 
 # Parameters
 NAME = 'illumination_swap_all_reconstruction_and_envmap_loss'
-BATCH_SIZE = 25
-NUM_WORKERS = 8
+BATCH_SIZE = 5
+NUM_WORKERS = 4
 EPOCHS = 30
 SIZE = 256
 TRAIN_SAMPLES = 20000
@@ -108,6 +108,10 @@ def report_loss(component_reconstruction, component_envmap, step, mode='Train'):
 
 def report_metrics(psnr_value, step, mode='Train'):
     writer.add_scalar(f'Metrics/{mode}/1-PSNR', psnr_value, step)
+
+
+print('Memory stats before training:')
+print_memory_summary(device)
 
 
 # Train loop

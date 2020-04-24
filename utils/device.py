@@ -1,4 +1,4 @@
-import torch
+from torch import device, cuda
 import os
 
 
@@ -8,7 +8,6 @@ DEFAULT_GPU = 2
 def setup_device(gpu_ids):
     """
     Creates a torch.device
-    WARNING: this won't work for multiple GPUs FIXME
     @param gpu_ids: ID(s) (list of integers) of the GPU(s) that should be used if they're available
     @return: device which can be used e.g. for torch.Tensor.to(<device>)
     """
@@ -16,18 +15,18 @@ def setup_device(gpu_ids):
     gpu_ids_string = ', '.join(gpu_ids)
     used_gpus = len(gpu_ids)
     if used_gpus > 1:
-        print(f"You're about to use {used_gpus} GPUs: {gpu_ids_string}.\n",
-              f"To confirm you know what you're doing type 'y':")
-        answer = input()
-        if answer != 'y':
-            print(f'Aborting training on multiple GPUs, choosing GPU {DEFAULT_GPU}')
-            gpu_ids_string = f'{DEFAULT_GPU}'
-    if torch.cuda.is_available():
+        print('Cannot use more than one device.')
+        return None
+    if cuda.is_available():
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids_string
-        device = torch.device(f'cuda:{gpu_ids_string}')
-        print(f'Cuda available, using GPU: {gpu_ids_string}')
+        dev = device(f'cuda:{gpu_ids_string}')
+        print(f'Cuda available, using GPU {gpu_ids_string}')
     else:
-        device = torch.device('cpu')
+        dev = device('cpu')
         print('Cuda NOT available, using CPU!')
-    print(f'Created device: {device}')
-    return device
+    print(f'Created device: {dev}')
+    return dev
+
+
+def print_memory_summary(dev):
+    print(cuda.memory_summary(dev))

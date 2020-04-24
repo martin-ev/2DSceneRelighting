@@ -52,22 +52,21 @@ train_dataset = InputTargetGroundtruthDataset(transform=transform,
 test_dataset = InputTargetGroundtruthDataset(data_path=VALIDATION_DATA_PATH,
                                              transform=transform,
                                              pairing_strategies=pairing_strategies)
-TRAIN_DATASET_SIZE = len(train_dataset)
-TEST_DATASET_SIZE = len(test_dataset)
 
 # Configure data loaders
 # Sub-sampling:
 # https://discuss.pytorch.org/t/train-on-a-fraction-of-the-data-set/16743/2
 # https://discuss.pytorch.org/t/torch-equivalent-of-numpy-random-choice/16146/5
-train_subset_indices = unique(randint(0, TRAIN_DATASET_SIZE, (TRAIN_SAMPLES,)))
+train_subset_indices = unique(randint(0, len(train_dataset), (TRAIN_SAMPLES,)))
 train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
                               sampler=SubsetRandomSampler(train_subset_indices))
-test_subset_indices = unique(randint(0, TEST_DATASET_SIZE, (TEST_SAMPLES,)))
+test_subset_indices = unique(randint(0, len(test_dataset), (TEST_SAMPLES,)))
 test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
                              sampler=SubsetRandomSampler(test_subset_indices))
 TEST_BATCHES = len(test_dataloader)
+REAL_TEST_SAMPLES = len(test_subset_indices)
 print(f'Train dataset: {len(train_subset_indices)} samples, {len(train_dataloader)} batches.')
-print(f'Test dataset: {len(test_subset_indices)} samples, {TEST_BATCHES} batches.')
+print(f'Test dataset: {REAL_TEST_SAMPLES} samples, {TEST_BATCHES} batches.')
 print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 
 
@@ -82,8 +81,10 @@ def unpack_batch(data_batch):
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
-TRAIN_VISUALIZATION_FREQ = TRAIN_DATASET_SIZE // BATCH_SIZE // 10
-print(f'{SHOWN_SAMPLES} samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
+TRAIN_VISUALIZATION_FREQ = len(train_subset_indices) // BATCH_SIZE // 100
+TEST_VISUALIZATION_FREQ = len(train_subset_indices) // BATCH_SIZE // 20
+print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
+print(f'Evaluation will be performed every {TEST_VISUALIZATION_FREQ} train batches.')
 
 
 def visualize(in_img, out_img, gt_img, target_img, in_envmap, gt_envmap, target_envmap, step, mode='Train'):
@@ -110,6 +111,7 @@ def report_metrics(psnr_value, step, mode='Train'):
 
 
 # Train loop
+train_step, test_step = 0, 0
 for epoch in range(1, EPOCHS+1):
     print(f'Epoch {epoch}:')
 
@@ -138,39 +140,46 @@ for epoch in range(1, EPOCHS+1):
         if batch_idx % TRAIN_VISUALIZATION_FREQ == 0:
             visualize(x, relighted_image, ground_truth, target,
                       image_em, ground_truth_em, target_em,
-                      epoch, 'Train')
+                      train_step, 'Train')
+            report_loss(train_loss_reconstruction, train_loss_env_map, train_step, 'Train')
+            report_metrics(train_psnr / (TRAIN_VISUALIZATION_FREQ * BATCH_SIZE), train_step, 'Train')
 
-    # Evaluate
-    model.eval()
-    test_loss_reconstruction, test_loss_env_map = 0, 0
-    test_psnr = 0.0
-    random_batch_id = randint(0, TEST_BATCHES, (1,))
-    for test_batch_idx, test_batch in enumerate(test_dataloader):
-        test_x, test_target, test_ground_truth = unpack_batch(test_batch)
+            train_loss_reconstruction, train_loss_env_map = 0, 0
+            train_psnr = 0.0
 
-        # Inference
-        test_relighted_image, test_image_em, test_target_em, test_ground_truth_em = \
-            model(test_x, test_target, test_ground_truth)
+            train_step += 1
 
-        # Test loss
-        loss1, loss2 = compute_losses(test_relighted_image, test_image_em, test_target_em, test_ground_truth_em)
-        test_loss_reconstruction += loss1.item()
-        test_loss_env_map += loss2.item()
-        test_psnr += psnr(test_relighted_image, test_ground_truth)
+        # Evaluate
+        if batch_idx % TEST_VISUALIZATION_FREQ == 0:
+            model.eval()
+            test_loss_reconstruction, test_loss_env_map = 0, 0
+            test_psnr = 0.0
+            random_batch_id = randint(0, TEST_BATCHES, (1,))
+            for test_batch_idx, test_batch in enumerate(test_dataloader):
+                test_x, test_target, test_ground_truth = unpack_batch(test_batch)
 
-        # Visualize randomly selected batch
-        if test_batch_idx == random_batch_id:
-            visualize(test_x, test_relighted_image, test_ground_truth, test_target,
-                      test_image_em, test_ground_truth_em, test_target_em,
-                      epoch, 'Test')
+                # Inference
+                test_relighted_image, test_image_em, test_target_em, test_ground_truth_em = \
+                    model(test_x, test_target, test_ground_truth)
 
-    # Update tensorboard with losses and metrics
-    train_psnr /= TRAIN_DATASET_SIZE
-    test_psnr /= TEST_DATASET_SIZE
-    report_loss(train_loss_reconstruction, train_loss_env_map, epoch, 'Train')
-    report_loss(test_loss_reconstruction, test_loss_env_map, epoch, 'Test')
-    report_metrics(train_psnr, epoch, 'Train')
-    report_metrics(test_psnr, epoch, 'Test')
+                # Test loss
+                loss1, loss2 = compute_losses(test_relighted_image, test_image_em, test_target_em, test_ground_truth_em)
+                test_loss_reconstruction += loss1.item()
+                test_loss_env_map += loss2.item()
+                test_psnr += psnr(test_relighted_image, test_ground_truth)
+
+                # Visualize randomly selected batch
+                if test_batch_idx == random_batch_id:
+                    visualize(test_x, test_relighted_image, test_ground_truth, test_target,
+                              test_image_em, test_ground_truth_em, test_target_em,
+                              test_step, 'Test')
+
+            # Report test metrics
+            report_loss(test_loss_reconstruction, test_loss_env_map, test_step, 'Test')
+            report_metrics(test_psnr / REAL_TEST_SAMPLES, test_step, 'Test')
+
+            test_step += 1
+            model.train()
 
 # Store trained model
 save_trained(model, NAME)

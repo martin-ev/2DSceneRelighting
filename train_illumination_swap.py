@@ -1,7 +1,8 @@
-from torch import randint
+from torch import randint, multinomial, arange
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision.transforms import Resize
 from torchvision.utils import make_grid
 
@@ -25,6 +26,8 @@ BATCH_SIZE = 25
 NUM_WORKERS = 8
 EPOCHS = 30
 SIZE = 256
+TRAIN_SAMPLES = 20000
+TEST_SAMPLES = 2000
 
 # Configure training objects
 model = IlluminationSwapNet().to(device)
@@ -41,7 +44,7 @@ def compute_losses(relighted, image_env_map, target_env_map, ground_truth_env_ma
     return reconstruct_loss, envmap_loss
 
 
-# Configure dataloader
+# Configure data sets
 transform = Resize(SIZE)
 pairing_strategies = [DifferentScene(), DifferentLightDirection()]
 train_dataset = InputTargetGroundtruthDataset(transform=transform,
@@ -49,12 +52,21 @@ train_dataset = InputTargetGroundtruthDataset(transform=transform,
 test_dataset = InputTargetGroundtruthDataset(data_path=VALIDATION_DATA_PATH,
                                              transform=transform,
                                              pairing_strategies=pairing_strategies)
-train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
-test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
 TRAIN_DATASET_SIZE = len(train_dataset)
 TEST_DATASET_SIZE = len(test_dataset)
-print(f'Train dataset: {TRAIN_DATASET_SIZE} samples.')
-print(f'Test dataset: {TEST_DATASET_SIZE} samples.')
+
+# Configure data loaders
+# Sub-sampling:
+# https://discuss.pytorch.org/t/train-on-a-fraction-of-the-data-set/16743/2
+# https://discuss.pytorch.org/t/torch-equivalent-of-numpy-random-choice/16146/5
+train_subset_indices = multinomial(arange(TRAIN_DATASET_SIZE), TRAIN_SAMPLES)
+train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS,
+                              sampler=SubsetRandomSampler(train_subset_indices))
+test_subset_indices = multinomial(arange(TEST_DATASET_SIZE), TEST_SAMPLES)
+test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS,
+                             sampler=SubsetRandomSampler(test_subset_indices))
+print(f'Train dataset: {TRAIN_DATASET_SIZE} samples. Using {TRAIN_SAMPLES} samples.')
+print(f'Test dataset: {TEST_DATASET_SIZE} samples. Using {TEST_SAMPLES} samples.')
 print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 
 

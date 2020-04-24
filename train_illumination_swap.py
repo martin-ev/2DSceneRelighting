@@ -1,4 +1,4 @@
-from torch import randint, multinomial, arange
+from torch import randint, unique
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -59,14 +59,15 @@ TEST_DATASET_SIZE = len(test_dataset)
 # Sub-sampling:
 # https://discuss.pytorch.org/t/train-on-a-fraction-of-the-data-set/16743/2
 # https://discuss.pytorch.org/t/torch-equivalent-of-numpy-random-choice/16146/5
-train_subset_indices = multinomial(arange(TRAIN_DATASET_SIZE), TRAIN_SAMPLES)
-train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS,
+train_subset_indices = unique(randint(0, TRAIN_DATASET_SIZE, (TRAIN_SAMPLES,)))
+train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
                               sampler=SubsetRandomSampler(train_subset_indices))
-test_subset_indices = multinomial(arange(TEST_DATASET_SIZE), TEST_SAMPLES)
-test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS,
+test_subset_indices = unique(randint(0, TEST_DATASET_SIZE, (TEST_SAMPLES,)))
+test_dataloader = DataLoader(test_dataset, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
                              sampler=SubsetRandomSampler(test_subset_indices))
-print(f'Train dataset: {TRAIN_DATASET_SIZE} samples. Using {TRAIN_SAMPLES} samples.')
-print(f'Test dataset: {TEST_DATASET_SIZE} samples. Using {TEST_SAMPLES} samples.')
+TEST_BATCHES = len(test_dataloader)
+print(f'Train dataset: {len(train_subset_indices)} samples, {len(train_dataloader)} batches.')
+print(f'Test dataset: {len(test_subset_indices)} samples, {TEST_BATCHES} batches.')
 print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 
 
@@ -143,7 +144,7 @@ for epoch in range(1, EPOCHS+1):
     model.eval()
     test_loss_reconstruction, test_loss_env_map = 0, 0
     test_psnr = 0.0
-    random_batch_id = randint(0, TEST_DATASET_SIZE, (1,))
+    random_batch_id = randint(0, TEST_BATCHES, (1,))
     for test_batch_idx, test_batch in enumerate(test_dataloader):
         test_x, test_target, test_ground_truth = unpack_batch(test_batch)
 
@@ -155,7 +156,7 @@ for epoch in range(1, EPOCHS+1):
         loss1, loss2 = compute_losses(test_relighted_image, test_image_em, test_target_em, test_ground_truth_em)
         test_loss_reconstruction += loss1.item()
         test_loss_env_map += loss2.item()
-        test_psnr = psnr(test_relighted_image, test_ground_truth)
+        test_psnr += psnr(test_relighted_image, test_ground_truth)
 
         # Visualize randomly selected batch
         if test_batch_idx == random_batch_id:

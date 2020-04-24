@@ -70,13 +70,6 @@ print(f'Test dataset: {REAL_TEST_SAMPLES} samples, {TEST_BATCHES} batches.')
 print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 
 
-def unpack_batch(data_batch):
-    inp = data_batch[0][0]['image'].to(device)
-    tar = data_batch[0][1]['image'].to(device)
-    gt = data_batch[1]['image'].to(device)
-    return inp, tar, gt
-
-
 # Configure tensorboard
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
@@ -124,7 +117,9 @@ for epoch in range(1, EPOCHS+1):
     train_loss_reconstruction, train_loss_env_map = 0, 0
     train_psnr = 0.0
     for batch_idx, batch in tqdm(enumerate(train_dataloader)):
-        x, target, ground_truth = unpack_batch(batch)
+        x = batch[0][0]['image'].to(device)
+        target = batch[0][1]['image'].to(device)
+        ground_truth = batch[1]['image'].to(device)
 
         # Forward
         relighted_image, image_em, target_em, ground_truth_em = model(x, target, ground_truth)
@@ -160,7 +155,9 @@ for epoch in range(1, EPOCHS+1):
             test_psnr = 0.0
             random_batch_id = randint(0, TEST_BATCHES, (1,))
             for test_batch_idx, test_batch in enumerate(test_dataloader):
-                test_x, test_target, test_ground_truth = unpack_batch(test_batch)
+                test_x = batch[0][0]['image'].to(device)
+                test_target = batch[0][1]['image'].to(device)
+                test_ground_truth = batch[1]['image'].to(device)
 
                 # Inference
                 test_relighted_image, test_image_em, test_target_em, test_ground_truth_em = \

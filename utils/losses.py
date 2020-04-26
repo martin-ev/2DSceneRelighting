@@ -63,3 +63,17 @@ class SceneLatentLoss(_SimpleLossWithRef):
 class LightLatentLoss(_SimpleLossWithRef):    
     def __init__(self, p=2):
         super().__init__(p=p)
+        
+class GANLoss(_Loss):    
+    def __init__(self):
+        super().__init__()
+        self.distance = nn.MSELoss()
+    def forward(self, disc_out_fake, disc_out_real):
+        return self.distance(disc_out_fake, torch.zeros(disc_out_fake.size()).to(disc_out_fake.device)) + self.distance(disc_out_real, torch.ones(disc_out_real.size()).to(disc_out_real.device))
+
+class FoolGANLoss(_Loss):    
+    def __init__(self):
+        super().__init__()
+        self.distance = nn.MSELoss()
+    def forward(self, disc_out_fake):
+        return self.distance(disc_out_fake, torch.ones(disc_out_fake.size()).to(disc_out_fake.device))

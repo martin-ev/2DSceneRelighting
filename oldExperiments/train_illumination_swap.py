@@ -22,8 +22,8 @@ device = setup_device(GPU_IDS)
 
 # Parameters
 NAME = 'illumination_swap_all_reconstruction_and_envmap_loss'
-BATCH_SIZE = 5
-NUM_WORKERS = 4
+BATCH_SIZE = 8
+NUM_WORKERS = 8
 EPOCHS = 30
 SIZE = 256
 TRAIN_SAMPLES = 20000

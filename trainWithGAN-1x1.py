@@ -14,7 +14,8 @@ import utils.tensorboard as tensorboard
 from utils.dataset import InputTargetGroundtruthDataset, TRAIN_DATA_PATH, VALIDATION_DATA_PATH
 from torch.utils.data import DataLoader
 
-from models.swapModels import IlluminationSwapNet as SwapNet
+from models.swapModels import SwapNet512x1x1 as SwapNet
+#from models.swapModels import IlluminationSwapNet as SwapNet
 #from models.swapModels import AnOtherSwapNet as SwapNet
 from models.patchGan import NLayerDiscriminator
 
@@ -24,21 +25,24 @@ GPU_IDS = [2]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'MergedModelsAnOtherSwapNet'
-TRAIN_BATCH_SIZE = 15
+NAME = 'SwapNet512x1x1WithoutGAN'
+TRAIN_BATCH_SIZE = 20
 TRAIN_NUM_WORKERS = 8
-TEST_BATCH_SIZE = 15
+TEST_BATCH_SIZE = 20
 TEST_NUM_WORKERS = 8
 SIZE = 256
 TRAIN_DURATION = 60000
 
 # Configure training objects
-generator = SwapNet().to(device)
+generator = SwapNet(last_kernel_size=1).to(device)
 discriminator = NLayerDiscriminator().to(device)
 optimizerG = torch.optim.Adam(generator.parameters(), weight_decay=0)
 optimizerD = torch.optim.Adam(discriminator.parameters(), weight_decay=0)
 generator.train()
 discriminator.train()  
+
+print(generator)
+print(discriminator)
 
 # Losses
 reconstruction_loss = ReconstructionLoss().to(device)
@@ -49,8 +53,7 @@ fool_gan_loss = FoolGANLoss().to(device)
 
 # Configure dataloader
 train_dataset = InputTargetGroundtruthDataset(transform=transforms.Resize(SIZE),
-                                              data_path=TRAIN_DATA_PATH)
-#locations=['scene_abandonned_city_54'], input_directions = ["S"], target_directions = ["N"], input_colors = ["2500"], target_colors = ["6500"]
+                                              data_path=TRAIN_DATA_PATH)#,locations=['scene_abandonned_city_54'], input_directions = ["S"], target_directions = ["N"], input_colors = ["2500"], target_colors = ["6500"])
 test_dataset = InputTargetGroundtruthDataset(transform=transforms.Resize(SIZE),
                                              data_path=VALIDATION_DATA_PATH)
 train_dataloader  = DataLoader(train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=TRAIN_NUM_WORKERS)
@@ -95,7 +98,7 @@ while train_batches_counter < TRAIN_DURATION :
     input_light_latent, target_light_latent, groundtruth_light_latent, \
     input_scene_latent, target_scene_latent, groundtruth_scene_latent = output  
     disc_out_fake = discriminator(relit_image)
-    generator_loss = reconstruction_loss(relit_image, groundtruth_image) + .3 * fool_gan_loss(disc_out_fake)
+    generator_loss = reconstruction_loss(relit_image, groundtruth_image) #+ .3 * fool_gan_loss(disc_out_fake)
     train_generator_loss += generator_loss.item()
     train_discriminator_loss += generator_loss.item()
     train_score += reconstruction_loss(input_image, groundtruth_image).item() / reconstruction_loss(relit_image, groundtruth_image).item()    

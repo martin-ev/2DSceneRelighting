@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from abc import ABC
 
+
 # =======
 # Encoder
 # =======
@@ -12,11 +13,11 @@ class EncoderPart(nn.Module, ABC):
     def __init__(self):
         super(EncoderPart, self).__init__()
     
-    #@abstractmethod
+    # @abstractmethod
     def forward(self, x):
         return NotImplemented
     
-    #@abstractmethod
+    # @abstractmethod
     def get_skip_connections(self):
         return NotImplemented
     
@@ -26,12 +27,12 @@ class ImageEncoding(EncoderPart):
         super(ImageEncoding, self).__init__()
         self.conv1 = nn.Sequential(
                         nn.Conv2d(in_channels, enc_channels - in_channels, 7, padding=3),
-                        nn.BatchNorm2d(enc_channels - in_channels), #nn.GroupNorm(1, enc_channels - in_channels),
+                        nn.BatchNorm2d(enc_channels - in_channels),
                         nn.PReLU()
                      )
         self.conv2 = nn.Sequential(
                         nn.Conv2d(enc_channels, out_channels, 3, stride=2, padding=1),
-                        nn.BatchNorm2d(out_channels), #nn.GroupNorm(out_channels // 16, out_channels),
+                        nn.BatchNorm2d(out_channels),
                         nn.PReLU()
                      )
         self.encoded_image = None
@@ -44,18 +45,19 @@ class ImageEncoding(EncoderPart):
     def get_skip_connections(self):
         # should not require tensor copying (based on https://github.com/milesial/Pytorch-UNet)
         return [self.encoded_image]
-    
+
+
 class EncDoubleConv(EncoderPart):
-    def __init__(self, in_channels, out_channels, channels_per_group=16):
+    def __init__(self, in_channels, out_channels):
         super(EncDoubleConv, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 3, padding=1),
-            nn.BatchNorm2d(in_channels), #nn.GroupNorm(in_channels // channels_per_group, in_channels),
+            nn.BatchNorm2d(in_channels),
             nn.PReLU()
         )
         self.conv2 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_channels), #nn.GroupNorm(out_channels // channels_per_group, out_channels),
+            nn.BatchNorm2d(out_channels),
             nn.PReLU()
         )
         self.skip_connections = []
@@ -76,16 +78,16 @@ class EncDoubleConv(EncoderPart):
 
 
 class EncBottleneckConv(EncoderPart):
-    def __init__(self, in_channels, channels_per_group=16, depth=4):
+    def __init__(self, in_channels, depth=4):
         super(EncBottleneckConv, self).__init__()
-        self.convolutions = self._build_bottleneck_convolutions(in_channels, channels_per_group, depth)
+        self.convolutions = self._build_bottleneck_convolutions(in_channels, depth)
         self.skip_connections = []
 
     @staticmethod
-    def _build_bottleneck_convolutions(in_channels, channels_per_group, depth):
+    def _build_bottleneck_convolutions(in_channels, depth):
         single_conv = [nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 3, padding=1),
-            nn.BatchNorm2d(in_channels), #nn.GroupNorm(in_channels // channels_per_group, in_channels),
+            nn.BatchNorm2d(in_channels),
             nn.PReLU()
         )]
         convolutions = single_conv * (depth - 1)
@@ -106,6 +108,7 @@ class EncBottleneckConv(EncoderPart):
 
     def get_skip_connections(self):
         return self.skip_connections
+
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -145,14 +148,16 @@ class Encoder(nn.Module):
     def get_skip_connections(self):
         return self.skip_connections
 
+
 # ===========================
 # IlluminationSwapNetSplitter
 # ===========================
 
 class WeightedPooling(nn.Module):
-    def __init__(self, in_channels=512, channels_per_group=16, envmap_H=16, envmap_W=32):
-        expected_channels = envmap_H * envmap_W
-        assert in_channels == expected_channels, f'WeightedPooling input has {in_channels} channels, expected {expected_channels}'
+    def __init__(self, in_channels=512, envmap_h=16, envmap_w=32):
+        expected_channels = envmap_h * envmap_w
+        assert in_channels == expected_channels, \
+            f'WeightedPooling input has {in_channels} channels, expected {expected_channels}'
         
         super(WeightedPooling, self).__init__()
         
@@ -160,7 +165,7 @@ class WeightedPooling(nn.Module):
         out_channels = 4 * in_channels
         self.conv = nn.Sequential(
                         nn.Conv2d(in_channels, out_channels, 3, padding=1),
-                        nn.BatchNorm2d(out_channels), #nn.GroupNorm(out_channels // channels_per_group, out_channels),
+                        nn.BatchNorm2d(out_channels),
                         nn.Softplus()
                     )
 
@@ -177,18 +182,19 @@ class WeightedPooling(nn.Module):
 
 
 class Tiling(nn.Module):
-    def __init__(self, size=16, in_channels=1536, out_channels=512, channels_per_group=16):
+    def __init__(self, size=16, in_channels=1536, out_channels=512):
         super(Tiling, self).__init__()
         self.size = size
         self.encode = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
-            nn.BatchNorm2d(out_channels), #nn.GroupNorm(out_channels // channels_per_group, out_channels),
+            nn.BatchNorm2d(out_channels),
             nn.PReLU()
         )
 
     def forward(self, x):
         tiled = x.repeat((1, 1, self.size, self.size))
         return self.encode(tiled)
+
 
 class IlluminationSwapNetSplitter(nn.Module):
     def __init__(self):
@@ -201,21 +207,23 @@ class IlluminationSwapNetSplitter(nn.Module):
         light_latent = pred_env_map
         return scene_latent, light_latent
 
-class IlluminationSwapNetUnsplitter(nn.Module):
+
+class IlluminationSwapNetAssembler(nn.Module):
     def __init__(self):
-        super(IlluminationSwapNetUnsplitter, self).__init__()        
+        super(IlluminationSwapNetAssembler, self).__init__()
         self.tiling = Tiling()
 
     def forward(self, scene_latent, light_latent):        
         latent = self.tiling(light_latent)
         return latent
-    
+
+
 # ======================
 # AnOtherSwapNetSplitter
 # ======================
-        
+
 def size_splits(tensor, split_sizes, dim=0):
-    #https://github.com/pytorch/pytorch/issues/3223
+    # https://github.com/pytorch/pytorch/issues/3223
     """Splits the tensor according to chunks of split_sizes.
     
     Arguments:
@@ -232,58 +240,65 @@ def size_splits(tensor, split_sizes, dim=0):
     
     splits = torch.cumsum(torch.Tensor([0] + split_sizes), dim=0)[:-1]
 
-    return tuple(tensor.narrow(int(dim), int(start), int(length)) 
-        for start, length in zip(splits, split_sizes))
+    return tuple(tensor.narrow(int(dim), int(start), int(length)) for start, length in zip(splits, split_sizes))
+
 
 class AnOtherSwapNetSplitter(nn.Module):
     def __init__(self):
-        super(AnOtherSwapNetSplitter, self).__init__()       
-    def forward(self, latent):        
-        light_latent, scene_latent = size_splits(latent, [3,509], dim=1)
+        super(AnOtherSwapNetSplitter, self).__init__()
+
+    def forward(self, latent):
+        light_latent, scene_latent = size_splits(latent, [3, 509], dim=1)
         return scene_latent, light_latent
 
-class AnOtherSwapNetUnsplitter(nn.Module):
+
+class AnOtherSwapNetAssembler(nn.Module):
     def __init__(self):
-        super(AnOtherSwapNetUnsplitter, self).__init__()        
+        super(AnOtherSwapNetAssembler, self).__init__()
 
     def forward(self, scene_latent, light_latent):    
-        latent = torch.cat((light_latent, scene_latent), dim = 1)
+        latent = torch.cat((light_latent, scene_latent), dim=1)
         return latent
 
 # ======================
 # Splitter512x1x1
 # ======================
-        
+
+
 class Splitter512x1x1(nn.Module):
     def __init__(self):
         super(Splitter512x1x1, self).__init__() 
         self.to1 = nn.Sequential(
             nn.MaxPool2d(kernel_size=16),
-            nn.BatchNorm2d(512), #nn.GroupNorm(512 // 16, 512),
+            nn.BatchNorm2d(512),
             nn.PReLU()
         )
+
     def forward(self, latent):      
         latent = self.to1(latent) 
-        light_latent, scene_latent = size_splits(latent, [16,512-16], dim=1)
+        light_latent, scene_latent = size_splits(latent, [16, 512-16], dim=1)
         return scene_latent, light_latent
 
-class Unsplitter512x1x1(nn.Module):
+
+class Assembler512x1x1(nn.Module):
     def __init__(self):
-        super(Unsplitter512x1x1, self).__init__()  
+        super(Assembler512x1x1, self).__init__()
         self.to16 = nn.Sequential(
             nn.Upsample(size=(16, 16)),
-            nn.BatchNorm2d(512), #nn.GroupNorm(512 // 16, 512),
+            nn.BatchNorm2d(512),
             nn.PReLU()
         )
 
     def forward(self, scene_latent, light_latent):    
-        latent = torch.cat((light_latent, scene_latent), dim = 1)  
+        latent = torch.cat((light_latent, scene_latent), dim=1)
         latent = self.to16(latent) 
         return latent
-    
+
+
 # =======
 # Decoder
 # =======
+
 def channel_concat(x, y):
     return torch.cat((x, y), dim=1)
 
@@ -291,42 +306,42 @@ def channel_concat(x, y):
 class DecoderPart(nn.Module, ABC):
     def __init__(self):
         super(DecoderPart, self).__init__()
-    
-    #@abstractmethod
+
     def forward(self, x, skip_connections):
         return NotImplemented
     
 
-
 class DecBottleneckConv(DecoderPart):
-    def __init__(self, in_channels, channels_per_group=16, envmap_H=16, envmap_W=32, depth=4):
+    def __init__(self, in_channels, envmap_H=16, envmap_W=32, depth=4):
         expected_channels = envmap_H * envmap_W
         assert depth >= 2, f'Depth should be not smaller than 3'
-        assert in_channels == expected_channels, f'UpBottleneck input has {in_channels} channels, expected {expected_channels}'
+        assert in_channels == expected_channels, \
+            f'UpBottleneck input has {in_channels} channels, expected {expected_channels}'
         super(DecBottleneckConv, self).__init__()
         self.depth = depth
 
         half_in_channels = in_channels // 2
         self.encode = nn.Sequential(
             nn.Conv2d(in_channels, half_in_channels, 3, padding=1),
-            nn.BatchNorm2d(half_in_channels), #nn.GroupNorm(half_in_channels // channels_per_group, half_in_channels),
+            nn.BatchNorm2d(half_in_channels),
             nn.PReLU()
         )
         # TODO: why are these paddings necessary
         self.initial_conv = nn.Sequential(
             nn.Conv2d(in_channels + half_in_channels, in_channels, 3, padding=1),
-            nn.BatchNorm2d(in_channels), #nn.GroupNorm(in_channels // channels_per_group, in_channels),
+            nn.BatchNorm2d(in_channels),
             nn.PReLU()
         )
         self.convs = nn.ModuleList([nn.Sequential(
             nn.Conv2d(2 * in_channels, in_channels, 3, padding=1),
-            nn.BatchNorm2d(in_channels), #nn.GroupNorm(in_channels // channels_per_group, in_channels),
+            nn.BatchNorm2d(in_channels),
             nn.PReLU()
         )] * (depth - 3))
         # TODO: output_padding added to fit the spatial dimensions, but there is no reasoned justification for it
         self.out_conv = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True), nn.Conv2d(2 * in_channels, half_in_channels, 3, padding=1),#nn.ConvTranspose2d(2 * in_channels, half_in_channels, 3, stride=2, padding=1, output_padding=1),
-            nn.BatchNorm2d(half_in_channels), #nn.GroupNorm(half_in_channels // channels_per_group, half_in_channels),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
+            nn.Conv2d(2 * in_channels, half_in_channels, 3, padding=1),
+            nn.BatchNorm2d(half_in_channels),
             nn.PReLU()
         )
 
@@ -342,17 +357,17 @@ class DecBottleneckConv(DecoderPart):
 
 
 class DecDoubleConv(DecoderPart):
-    def __init__(self, in_channels, out_channels, channels_per_group=16):
+    def __init__(self, in_channels, out_channels,):
         super(DecDoubleConv, self).__init__()
-        # TODO: why are these paddings necessary
         self.conv1 = nn.Sequential(
             nn.Conv2d(2 * in_channels, in_channels, 3, padding=1),
-            nn.BatchNorm2d(in_channels), #nn.GroupNorm(in_channels // channels_per_group, in_channels),
+            nn.BatchNorm2d(in_channels),
             nn.PReLU()
         )
         self.conv2 = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True), nn.Conv2d(2 * in_channels, out_channels, 3, padding=1),#nn.ConvTranspose2d(2 * in_channels, out_channels, 3, stride=2, padding=1, output_padding=1),
-            nn.BatchNorm2d(out_channels), #nn.GroupNorm(out_channels // channels_per_group, out_channels),
+            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True),
+            nn.Conv2d(2 * in_channels, out_channels, 3, padding=1),
+            nn.BatchNorm2d(out_channels),
             nn.PReLU()
         )
 
@@ -365,13 +380,14 @@ class Output(DecoderPart):
     def __init__(self, in_channels=64, out_channels=3, kernel_size=3):
         super(Output, self).__init__()
         self.block = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size, padding=kernel_size//2),  # should it be conv or transposed conv?
-            #nn.GroupNorm(1, out_channels),
+            # should it be conv or transposed conv?
+            nn.Conv2d(in_channels, out_channels, kernel_size, padding=kernel_size//2),
             nn.Sigmoid()
         )
 
     def forward(self, x, encoded_img):
         return self.block(channel_concat(x, encoded_img))
+
 
 class Decoder(nn.Module):
     def __init__(self, last_kernel_size=3):
@@ -402,17 +418,16 @@ class Decoder(nn.Module):
         return relighted
 
 
-
 # =======
 # SwapNet
 # =======
         
 class SwapNet(nn.Module):
-    def __init__(self, splitter, unsplitter, last_kernel_size=3):
+    def __init__(self, splitter, assembler, last_kernel_size=3):
         super(SwapNet, self).__init__()
         self.encode = Encoder()
         self.split = splitter
-        self.unsplit = unsplitter
+        self.assemble = assembler
         self.decode = Decoder(last_kernel_size=last_kernel_size)
 
     def forward(self, image, target, groundtruth):
@@ -429,9 +444,9 @@ class SwapNet(nn.Module):
         # pass target_latent through splitter
         target_scene_latent, target_light_latent = self.split(target_latent)      
         # pass groundtruth_latent through splitter
-        groundtruth_scene_latent, groundtruth_light_latent= self.split(groundtruth_latent)
+        groundtruth_scene_latent, groundtruth_light_latent = self.split(groundtruth_latent)
         
-        swapped_latent = self.unsplit(image_scene_latent, target_light_latent)
+        swapped_latent = self.assemble(image_scene_latent, target_light_latent)
 
         # decode image with target env map
         relit_image = self.decode(swapped_latent, image_skip_connections)
@@ -443,9 +458,10 @@ class SwapNet(nn.Module):
         # relighted_env_map = self.encode(relighted_image)
 
         return relit_image, \
-               image_light_latent, target_light_latent, groundtruth_light_latent, \
-               image_scene_latent, target_scene_latent, groundtruth_scene_latent
-               
+            image_light_latent, target_light_latent, groundtruth_light_latent, \
+            image_scene_latent, target_scene_latent, groundtruth_scene_latent
+
+
 class IlluminationSwapNet(SwapNet):
     def __init__(self, last_kernel_size=3):
         """
@@ -455,37 +471,43 @@ class IlluminationSwapNet(SwapNet):
         representations are swapped so that the decoder, using U-Net-like skip connections from the encoder,
         generates image with the original content but under the lighting conditions of the second input.
         """
-        super(IlluminationSwapNet, self).__init__(splitter = IlluminationSwapNetSplitter(),
-                                                  unsplitter = IlluminationSwapNetUnsplitter(),
-                                            last_kernel_size=last_kernel_size)
+        super(IlluminationSwapNet, self).__init__(splitter=IlluminationSwapNetSplitter(),
+                                                  assembler=IlluminationSwapNetAssembler(),
+                                                  last_kernel_size=last_kernel_size)
+
     def forward(self, image, target, ground_truth):
         relit_image, \
-        image_light_latent, target_light_latent, groundtruth_light_latent, \
-        image_scene_latent, target_scene_latent, groundtruth_scene_latent = \
-        super(IlluminationSwapNet, self).forward(image, target, ground_truth)
+            image_light_latent, target_light_latent, groundtruth_light_latent, \
+            image_scene_latent, target_scene_latent, groundtruth_scene_latent = \
+            super(IlluminationSwapNet, self).forward(image, target, ground_truth)
         return relit_image,\
-        image_light_latent.view(-1, 3, 16, 32), target_light_latent.view(-1, 3, 16, 32), groundtruth_light_latent.view(-1, 3, 16, 32),\
-        image_scene_latent, target_scene_latent, groundtruth_scene_latent #those are None
-        
+            image_light_latent.view(-1, 3, 16, 32), \
+            target_light_latent.view(-1, 3, 16, 32), groundtruth_light_latent.view(-1, 3, 16, 32), \
+            image_scene_latent, target_scene_latent, groundtruth_scene_latent  # those are None
+
+
 class AnOtherSwapNet(SwapNet):
     def __init__(self, last_kernel_size=3):
-        super(AnOtherSwapNet, self).__init__(splitter = AnOtherSwapNetSplitter(),
-                                             unsplitter = AnOtherSwapNetUnsplitter(),
-                                            last_kernel_size=last_kernel_size)
+        super(AnOtherSwapNet, self).__init__(splitter=AnOtherSwapNetSplitter(),
+                                             assembler=AnOtherSwapNetAssembler(),
+                                             last_kernel_size=last_kernel_size)
+
     def forward(self, image, target, ground_truth):
         return super(AnOtherSwapNet, self).forward(image, target, ground_truth)
 
+
 class SwapNet512x1x1(SwapNet):
     def __init__(self, last_kernel_size=3):
-        super(SwapNet512x1x1, self).__init__(splitter = Splitter512x1x1(),
-                                              unsplitter = Unsplitter512x1x1(),
-                                            last_kernel_size=last_kernel_size)
+        super(SwapNet512x1x1, self).__init__(splitter=Splitter512x1x1(),
+                                             assembler=Assembler512x1x1(),
+                                             last_kernel_size=last_kernel_size)
+
     def forward(self, image, target, ground_truth):
         relit_image, \
-        image_light_latent, target_light_latent, groundtruth_light_latent, \
-        image_scene_latent, target_scene_latent, groundtruth_scene_latent = \
-        super(SwapNet512x1x1, self).forward(image, target, ground_truth)
+            image_light_latent, target_light_latent, groundtruth_light_latent, \
+            image_scene_latent, target_scene_latent, groundtruth_scene_latent = \
+            super(SwapNet512x1x1, self).forward(image, target, ground_truth)
         return relit_image,\
-        image_light_latent.view(-1, 1, 4, 4), target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4),\
-        image_scene_latent, target_scene_latent, groundtruth_scene_latent 
-        
+            image_light_latent.view(-1, 1, 4, 4), \
+            target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4), \
+            image_scene_latent, target_scene_latent, groundtruth_scene_latent

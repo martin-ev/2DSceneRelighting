@@ -198,6 +198,28 @@ class DifferentLightDirection(PairingStrategy):
 
     def can_be_paired(self, input_sample, target_sample):
         return input_sample.direction != target_sample.direction
+    
+class SameScene(PairingStrategy):
+    def __init__(self):
+        super(SameScene, self).__init__()
+
+    def can_be_paired(self, input_sample, target_sample):
+        return input_sample.scene == target_sample.scene
+
+
+class SameLightDirection(PairingStrategy):
+    def __init__(self):
+        super(SameLightDirection, self).__init__()
+
+    def can_be_paired(self, input_sample, target_sample):
+        return input_sample.direction == target_sample.direction
+    
+class SameLightColor(PairingStrategy):
+    def __init__(self):
+        super(SameLightDirection, self).__init__()
+
+    def can_be_paired(self, input_sample, target_sample):
+        return input_sample.color == target_sample.color
 
 
 class InputTargetGroundtruthDataset(ImageDataset):
@@ -223,6 +245,8 @@ class InputTargetGroundtruthDataset(ImageDataset):
         # Associate (input, target) to correct ground-truth
         print("- Associating input, target and ground-truth samples") 
         self.items = []
+        print(len(self.target_samples))
+
         for input_sample in tqdm(self.input_samples):
             for target_sample in self.target_samples:
                 if self._can_be_paired(input_sample, target_sample):
@@ -243,7 +267,7 @@ class InputTargetGroundtruthDataset(ImageDataset):
 
     def _can_be_paired(self, input_sample, target_sample):
         for strategy in self.pairing_strategies:
-            if not strategy.can_be_paired(input_sample, target_sample):
+            if not strategy.can_be_paired(self, input_sample, target_sample):
                 return False
         return True
 

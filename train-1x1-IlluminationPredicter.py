@@ -8,49 +8,57 @@ from torchvision.utils import make_grid
 
 from utils.storage import save_trained, load_trained
 from utils.device import setup_device
-from utils.losses import ReconstructionLoss, SceneLatentLoss, LightLatentLoss, GANLoss, FoolGANLoss
+from utils.losses import ReconstructionLoss, SceneLatentLoss, LightLatentLoss, GANLoss, FoolGANLoss, ColorPredictionLoss, DirectionPredictionLoss
 import utils.tensorboard as tensorboard
 
 from utils.dataset import InputTargetGroundtruthDataset, TRAIN_DATA_PATH, VALIDATION_DATA_PATH
 from torch.utils.data import DataLoader
 
-from models.swapModels import IlluminationSwapNet as SwapNet
+from models.swapModels import SwapNet512x1x1 as SwapNet
+#from models.swapModels import IlluminationSwapNet as SwapNet
 #from models.swapModels import AnOtherSwapNet as SwapNet
+from models.swapModels import IlluminationPredicter
 from models.patchGan import NLayerDiscriminator
 
 
 # Get used device
-GPU_IDS = [1]
+GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'MergedModelsAnOtherSwapNet'
-TRAIN_BATCH_SIZE = 15
+NAME = 'SwapNet512x1x1WithoutGANIlluminationPredictor-testOverfit'
+TRAIN_BATCH_SIZE = 20
 TRAIN_NUM_WORKERS = 8
-TEST_BATCH_SIZE = 15
+TEST_BATCH_SIZE = 20
 TEST_NUM_WORKERS = 8
 SIZE = 256
 TRAIN_DURATION = 60000
 
-# Configure training objects
-generator = SwapNet().to(device)
+# Configure training 
+generator = SwapNet(last_kernel_size=1).to(device)
+illumination = IlluminationPredicter(in_size=16).to(device)
 discriminator = NLayerDiscriminator().to(device)
-optimizerG = torch.optim.Adam(generator.parameters(), weight_decay=0)
+optimizerG = torch.optim.Adam(list(generator.parameters()) + list(illumination.parameters()), weight_decay=0)
 optimizerD = torch.optim.Adam(discriminator.parameters(), weight_decay=0)
+generator.train()
+discriminator.train()  
+
+print(generator)
+print(discriminator)
 
 # Losses
 reconstruction_loss = ReconstructionLoss().to(device)
 scene_latent_loss = SceneLatentLoss().to(device)
 light_latent_loss = LightLatentLoss().to(device)
+color_prediction_loss = ColorPredictionLoss().to(device)
 gan_loss = GANLoss().to(device)
 fool_gan_loss = FoolGANLoss().to(device)
 
 # Configure dataloader
 train_dataset = InputTargetGroundtruthDataset(transform=transforms.Resize(SIZE),
-                                              data_path=TRAIN_DATA_PATH)
-#locations=['scene_abandonned_city_54'], input_directions = ["S"], target_directions = ["N"], input_colors = ["2500"], target_colors = ["6500"]
+                                              data_path=TRAIN_DATA_PATH, locations=['scene_abandonned_city_54'], input_directions = ["S"], target_directions = ["N"], input_colors = ["2500"], target_colors = ["6500"])
 test_dataset = InputTargetGroundtruthDataset(transform=transforms.Resize(SIZE),
-                                             data_path=VALIDATION_DATA_PATH)
+                                             data_path=VALIDATION_DATA_PATH, input_directions = ["S"], target_directions = ["N"], input_colors = ["2500"], target_colors = ["6500"])
 train_dataloader  = DataLoader(train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=TRAIN_NUM_WORKERS)
 test_dataloader  = DataLoader(test_dataset, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=TEST_NUM_WORKERS)
 print(f'Dataset contains {len(train_dataset)}+{len(test_dataset)} samples.')
@@ -72,9 +80,6 @@ train_dataloader_iter = iter(train_dataloader)
 train_batches_counter = 0 
 while train_batches_counter < TRAIN_DURATION :
     
-    generator.train()
-    discriminator.train()  
-
     # Load batch
     with torch.no_grad():
         try:
@@ -85,47 +90,50 @@ while train_batches_counter < TRAIN_DURATION :
         input_image = train_batch[0][0]['image'].to(device)
         target_image = train_batch[0][1]['image'].to(device)
         groundtruth_image = train_batch[1]['image'].to(device)
-        input_color = train_batch[0][0]['color'].to(device)
-        target_color = train_batch[0][1]['color'].to(device)
-        input_direction = train_batch[0][0]['direction'].to(device)
-        target_direction = train_batch[0][1]['direction'].to(device)
+        input_color = train_batch[0][0]['color'].float().to(device)
+        target_color = train_batch[0][1]['color'].float().to(device)
+        groundtruth_color = train_batch[1]['color'].float().to(device)
+        input_direction = train_batch[0][0]['direction'].float().to(device)
+        target_direction = train_batch[0][1]['direction'].float().to(device)
+        groundtruth_direction = train_batch[1]['direction'].float().to(device)
 
     # Generator : Forward  
     output = generator(input_image, target_image, groundtruth_image)
     relit_image, \
     input_light_latent, target_light_latent, groundtruth_light_latent, \
     input_scene_latent, target_scene_latent, groundtruth_scene_latent = output  
-    disc_out_fake = discriminator(relit_image)
-    generator_loss = reconstruction_loss(relit_image, groundtruth_image) + .3 * fool_gan_loss(disc_out_fake)
+    input_illumination = illumination(input_light_latent)
+    target_illumination = illumination(target_light_latent)
+    groundtruth_illumination = illumination(groundtruth_light_latent)
+    r = reconstruction_loss(relit_image, groundtruth_image)
+    c = 1/3 *  color_prediction_loss(input_illumination[:,0], input_color) \
+    + 1/3 *  color_prediction_loss(target_illumination[:,0], target_color) \
+    + 1/3 *  color_prediction_loss(groundtruth_illumination[:,0], input_color)
+    generator_loss = r + c #+ .3 * fool_gan_loss(disc_out_fake)
     train_generator_loss += generator_loss.item()
-    train_discriminator_loss += generator_loss.item()
     train_score += reconstruction_loss(input_image, groundtruth_image).item() / reconstruction_loss(relit_image, groundtruth_image).item()    
     # Generator : Backward 
     optimizerG.zero_grad()
     generator.zero_grad()
-    optimizerD.zero_grad()
     discriminator.zero_grad()
-    generator_loss.backward() # use requires_grad = False for speed? Et pour enlever ces zero_grad en double!
-    discriminator.zero_grad()
-    optimizerD.zero_grad()
+    generator_loss.backward()
+    discriminator.zero_grad() #discriminator is not allowed to change generator weights
     optimizerG.step()
-    
-    
     # Discriminator : Forward   
-    disc_out_real = discriminator(groundtruth_image) 
+    output = generator(input_image, target_image, groundtruth_image)
+    relit_image, \
+    input_light_latent, target_light_latent, groundtruth_light_latent, \
+    input_scene_latent, target_scene_latent, groundtruth_scene_latent = output 
+    disc_out_fake = discriminator(relit_image)
+    disc_out_real = discriminator(target_image) # better than groundtruth_image ?
     discriminator_loss = gan_loss(disc_out_fake, disc_out_real)
-    train_discriminator_loss += generator_loss.item()
-    
-    
+    train_discriminator_loss += discriminator_loss.item()
     # Discriminator : Backward 
     optimizerD.zero_grad()
+    generator.zero_grad()
     discriminator.zero_grad()
-    optimizerG.zero_grad()
-    generator.zero_grad()
     discriminator_loss.backward()
-    generator.zero_grad()
-    optimizerG.zero_grad()
-
+    generator.zero_grad() #discriminator is not allowed to change generator weights
     optimizerD.step()
     
     # Update train_batches_counter
@@ -149,10 +157,11 @@ while train_batches_counter < TRAIN_DURATION :
             writer.add_scalar('Loss/1-G-Loss-Train', train_generator_loss/TESTING_FREQ, step)
             writer.add_scalar('Loss/2-D-Loss-Train', train_discriminator_loss/TESTING_FREQ, step)
             writer.add_scalar('Score/1-Score-Train', train_score/TESTING_FREQ, step)
+            writer.add_scalar('Score/1-Reconstruction', train_score/TESTING_FREQ, step)
+            writer.add_scalar('Score/1-ColorPrediction', train_score/TESTING_FREQ, step)
             print ('TrainLoss:', train_generator_loss/TESTING_FREQ, 'TrainScore:', train_score/TESTING_FREQ)
             # Reset train scalars
             train_generator_loss, train_discriminator_loss, train_score = 0., 0., 0.
-            
             # Evaluate loop
             test_generator_loss, test_discriminator_loss, test_score = 0., 0., 0.
             testing_batches_counter = 0 
@@ -177,7 +186,7 @@ while train_batches_counter < TRAIN_DURATION :
                 input_scene_latent, target_scene_latent, groundtruth_scene_latent = output  
                 disc_out_fake = discriminator(relit_image)
                 disc_out_real = discriminator(target_image) # better than groundtruth_image
-                generator_loss = reconstruction_loss(relit_image, groundtruth_image) + .3 * fool_gan_loss(disc_out_fake)
+                generator_loss = reconstruction_loss(relit_image, groundtruth_image) #+ .3 * fool_gan_loss(disc_out_fake)
                 discriminator_loss = gan_loss(disc_out_fake, disc_out_real)
                 test_generator_loss += generator_loss.item()
                 test_discriminator_loss += discriminator_loss.item()

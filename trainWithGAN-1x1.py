@@ -1,12 +1,8 @@
 import torch
-import torchvision as tv
 import torchvision.transforms as transforms
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
 from torchvision.utils import make_grid
 
-from utils.storage import save_trained, load_trained
+from utils.storage import save_trained
 from utils.device import setup_device
 from utils.losses import ReconstructionLoss, SceneLatentLoss, LightLatentLoss, GANLoss, FoolGANLoss
 import utils.tensorboard as tensorboard
@@ -15,8 +11,6 @@ from utils.dataset import InputTargetGroundtruthDataset, TRAIN_DATA_PATH, VALIDA
 from torch.utils.data import DataLoader
 
 from models.swapModels import SwapNet512x1x1 as SwapNet
-#from models.swapModels import IlluminationSwapNet as SwapNet
-#from models.swapModels import AnOtherSwapNet as SwapNet
 from models.patchGan import NLayerDiscriminator
 
 
@@ -198,7 +192,8 @@ while train_batches_counter < TRAIN_DURATION :
             discriminator.train()  
 
 # Store trained model
-storage.save_trained(model, NAME)
+save_trained(generator, NAME + '_generator')
+save_trained(discriminator, NAME + '_discriminator')
 
 # Terminate tensorboard
 tensorboard.stop_tensorboard_process(tensorboard_process)

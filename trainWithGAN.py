@@ -1,9 +1,5 @@
 import torch
-import torchvision as tv
 import torchvision.transforms as transforms
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
 from torchvision.utils import make_grid
 
 from utils.storage import save_trained, load_trained
@@ -17,7 +13,6 @@ from utils.dataset import InputTargetGroundtruthDataset, TRAIN_DATA_PATH, VALIDA
 from torch.utils.data import DataLoader
 
 from models.swapModels import IlluminationSwapNet as SwapNet
-#from models.swapModels import AnOtherSwapNet as SwapNet
 from models.patchGan import NLayerDiscriminator
 
 def write_images(dataset):
@@ -90,8 +85,8 @@ print(f'Running for {TRAIN_DURATION} batches.')
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
-TESTING_FREQ = 100 # every how many batches model is tested and tensorboard is updated
-TESTING_BATCHES = 10 # how many batches for testing
+TESTING_FREQ = 100  # every how many batches model is tested and tensorboard is updated
+TESTING_BATCHES = 10  # how many batches for testing
 print(f'{SHOWN_SAMPLES} samples will be visualized every {TESTING_FREQ} batches.')
 
     
@@ -234,7 +229,8 @@ while train_batches_counter < TRAIN_DURATION :
             discriminator.train()  
 
 # Store trained model
-storage.save_trained(model, NAME)
+save_trained(generator, NAME + '_generator')
+save_trained(discriminator, NAME + '_discriminator')
 
 # Terminate tensorboard
 tensorboard.stop_tensorboard_process(tensorboard_process)

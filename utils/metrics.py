@@ -3,13 +3,16 @@
 import torch
 
 
-def psnr(img1, img2):
+def psnr(image_batch, groundtruth_batch):
     """
-    Peak Signal to Noise Ratio
+    Peak Signal to Noise Ratio (sum for all images within the batch)
     Inputs are expected to be in range [0, 255]
+    Sources:
+    https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio
+    https://www.mathworks.com/matlabcentral/fileexchange/37691-psnr-for-rgb-images
     """
-    mse = torch.mean((img1 - img2) ** 2)
-    return 20 * torch.log10(255.0 / torch.sqrt(mse))
+    mse = torch.mean((image_batch - groundtruth_batch) ** 2, dim=(1, 2, 3))
+    return (20 * torch.log10(255.0 / torch.sqrt(mse))).sum()
 
 
 # class SSIM:

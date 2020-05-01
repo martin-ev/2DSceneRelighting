@@ -4,6 +4,8 @@ import torch
 import torchvision
 
 from abc import ABC, abstractmethod  # https://www.python-course.eu/python3_abstract_classes.php
+from .envmap import generate_envmap
+from numpy import unique
 from PIL import Image as PILImage
 from tqdm import tqdm
 
@@ -69,7 +71,7 @@ class ImageDataset(torch.utils.data.Dataset):
     Provides logic for parsing constructor arguments into lists of samples that can be used as inputs and targets.
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
-                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH):
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
         self.data_path = data_path
 
         # Define which images to load
@@ -90,6 +92,17 @@ class ImageDataset(torch.utils.data.Dataset):
                 for color in self.target_colors:
                     for direction in self.target_directions:
                         self.target_samples += self._load_samples(data_path, location, color, direction)
+
+        # Transformations to perform on loaded images
+        if transform is None:
+            self.transform = torchvision.transforms.Compose([
+                torchvision.transforms.ToTensor()
+            ])
+        else:
+            self.transform = torchvision.transforms.Compose([
+                transform,
+                torchvision.transforms.ToTensor()
+            ])
     
     def _load_all_scenes(self, data_path):
         print(" - - Loading all scenes")
@@ -145,24 +158,13 @@ class SameTargetSceneDataset(ImageDataset):
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
                  target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None):
         super(SameTargetSceneDataset, self).__init__(locations, scenes, input_directions, input_colors,
-                                                     target_directions, target_colors, data_path)
+                                                     target_directions, target_colors, data_path, transform)
         self.items = []
         for input_sample in self.input_samples:
             for target_sample in self.target_samples:
                 # Pair up samples that are from the same scene
                 if input_sample['scene'] == target_sample['scene']:
                     self.items.append((input_sample, target_sample))
-
-        # Transformations to perform on loaded images
-        if transform is None:
-            self.transform = torchvision.transforms.Compose([
-                torchvision.transforms.ToTensor()
-            ])
-        else:
-            self.transform = torchvision.transforms.Compose([
-                torchvision.transforms.ToTensor(),
-                transform
-            ])
 
     def __getitem__(self, idx):
         input_sample, target_sample = self.items[idx]
@@ -234,7 +236,7 @@ class InputTargetGroundtruthDataset(ImageDataset):
         print("Initialising Dataset")
         print("- Loading input and target samples")
         super(InputTargetGroundtruthDataset, self).__init__(locations, scenes, input_directions, input_colors,
-                                                            target_directions, target_colors, data_path)
+                                                            target_directions, target_colors, data_path, transform)
         # Load all ground-truth samples
         print("- Loading ground-truth samples")
         self.pairing_strategies = [] if pairing_strategies is None else pairing_strategies
@@ -253,17 +255,7 @@ class InputTargetGroundtruthDataset(ImageDataset):
                     ground_truth_sample = self._find_ground_truth_sample_for(input_sample, target_sample)
                     self.items.append(((input_sample, target_sample), ground_truth_sample))
 
-        # Transformations to perform on loaded images
         print("- Finishing initialising Dataset")
-        if transform is None:
-            self.transform = torchvision.transforms.Compose([
-                torchvision.transforms.ToTensor()
-            ])
-        else:
-            self.transform = torchvision.transforms.Compose([
-                transform,
-                torchvision.transforms.ToTensor()
-            ])
 
     def _can_be_paired(self, input_sample, target_sample):
         for strategy in self.pairing_strategies:
@@ -288,6 +280,40 @@ class InputTargetGroundtruthDataset(ImageDataset):
 
     def __len__(self):
         return len(self.items)
+
+
+class InputTargetGroundtruthWithGeneratedEnvmapDataset(InputTargetGroundtruthDataset):
+    """
+    Dataset that loads ((input, input envmap), (target, target envmap), groundtruth) tuples.
+    In the returned tuple the ground truth image has the same light conditions (direction and color) as target image,
+    but was rendered in the same scene as the input image.
+    """
+    def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
+                 target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None,
+                 pairing_strategies=None, envmap_h=16, envmap_w=32):
+        super(InputTargetGroundtruthWithGeneratedEnvmapDataset, self).__init__(
+            locations, scenes, input_directions, input_colors, target_directions, target_colors, data_path, transform,
+            pairing_strategies)
+
+        # Generate ground-truth envmaps
+        light_directions = unique(input_directions + target_directions)
+        light_colors = unique(input_colors + target_colors)
+        self.ground_truth_envmaps = self._generate_ground_truth_envmaps(
+            light_directions, light_colors, envmap_h, envmap_w)
+
+    @staticmethod
+    def _generate_ground_truth_envmaps(light_directions, light_colors, envmap_h, envmap_w):
+        envmaps = {}
+        for direction in light_directions:
+            for color in light_colors:
+                envmaps[(direction, color)] = generate_envmap(direction, color, envmap_h, envmap_w)
+        return envmaps
+
+    def __getitem__(self, idx):
+        (x, target), ground_truth = self.items[idx]
+        return (Image(x, self.transform).as_dict(), self.ground_truth_envmaps[(x.direction, x.color)]), \
+            (Image(target, self.transform).as_dict(), self.ground_truth_envmaps[(target.direction, target.color)]), \
+            Image(ground_truth, self.transform).as_dict()
 
 
 class OneInputTargetGroundtruthDataset(InputTargetGroundtruthDataset):

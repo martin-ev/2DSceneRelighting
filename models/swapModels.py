@@ -164,10 +164,10 @@ class WeightedPooling(nn.Module):
         # final conv before weighted average
         out_channels = 4 * in_channels
         self.conv = nn.Sequential(
-                        nn.Conv2d(in_channels, out_channels, 3, padding=1),
-                        nn.BatchNorm2d(out_channels),
-                        nn.Softplus()
-                    )
+            nn.Conv2d(in_channels, out_channels, 3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.Softplus()
+        )
 
     def forward(self, x):
         x = self.conv(x)
@@ -211,10 +211,10 @@ class IlluminationSwapNetSplitter(nn.Module):
 class IlluminationSwapNetAssembler(nn.Module):
     def __init__(self):
         super(IlluminationSwapNetAssembler, self).__init__()
-        self.tiling = Tiling()
+        self.tile = Tiling()
 
     def forward(self, scene_latent, light_latent):        
-        latent = self.tiling(light_latent)
+        latent = self.tile(light_latent)
         return latent
 
 
@@ -413,9 +413,9 @@ class Decoder(nn.Module):
             x = double_conv(x, skip_connections)
 
         # final layer constructing image
-        relighted = self.output(x, skip_connections.pop())
+        relit = self.output(x, skip_connections.pop())
 
-        return relighted
+        return relit
 
 
 # =======
@@ -466,7 +466,7 @@ class IlluminationSwapNet(SwapNet):
     def __init__(self, last_kernel_size=3):
         """
         Illumination swap network model based on "Single Image Portrait Relighting" (Sun et al., 2019).
-        Autoencoder accepts two images as inputs - one to be relighted and one representing target lighting conditions.
+        Autoencoder accepts two images as inputs - one to be relit and one representing target lighting conditions.
         It learns to encode their environment maps in the latent representation. In the bottleneck the latent
         representations are swapped so that the decoder, using U-Net-like skip connections from the encoder,
         generates image with the original content but under the lighting conditions of the second input.
@@ -511,3 +511,35 @@ class SwapNet512x1x1(SwapNet):
             image_light_latent.view(-1, 1, 4, 4), \
             target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4), \
             image_scene_latent, target_scene_latent, groundtruth_scene_latent
+
+
+class GroundtruthEnvmapSwapNet(SwapNet):
+    """
+    Illumination swap network model based on "Single Image Portrait Relighting" (Sun et al., 2019) using additional
+    generated ground-truth environment maps.
+    Autoencoder accepts two images as inputs - one to be relit and one representing target lighting conditions.
+    It learns to encode their environment maps in the latent representation. In the bottleneck the latent
+    representations are swapped so that the decoder, using U-Net-like skip connections from the encoder,
+    generates image with the original content but under the lighting conditions of the second input.
+    """
+    def __init__(self):
+        super(GroundtruthEnvmapSwapNet, self).__init__(splitter=IlluminationSwapNetSplitter(),
+                                                       assembler=IlluminationSwapNetAssembler())
+
+    def forward(self, image, target, groundtruth):
+        # pass image & target through encoder
+        image_latent = self.encode(image)
+        image_skip_connections = self.encode.get_skip_connections()
+        _, predicted_image_envmap = self.split(image_latent)
+        target_latent = self.encode(target)
+        _, predicted_target_envmap = self.split(target_latent)
+
+        # decode from target envmap ground-truth using image skip connections
+        swapped_latent = self.assemble(None, predicted_target_envmap)
+        relit_image = self.decode(swapped_latent, image_skip_connections)
+
+        return relit_image, predicted_image_envmap, predicted_target_envmap
+
+
+
+

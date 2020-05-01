@@ -27,7 +27,8 @@ def generate_envmap(light_direction='N', height=16, width=32):
     # TODO: add rgb calculation for different light temperatures
     light_rgb = array([255.0, 255.0, 255.0])
     centered_envmap = _envmap_with_centered_light(light_rgb, height, width)
-    return _rotate_envmap_to_match_direction(centered_envmap, light_direction)
+    rotated_envmap = _rotate_envmap_to_match_direction(centered_envmap, light_direction)
+    return rotated_envmap.view(3 * height * width, 1, 1)
 
 
 def _envmap_with_centered_light(color, height, width):

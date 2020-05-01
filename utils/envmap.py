@@ -15,10 +15,11 @@ ROTATIONS = {
 }
 
 
-def generate_envmap(light_direction='N', height=16, width=32):
+def generate_envmap(light_direction, light_temp, height=16, width=32):
     """
     Generates environment map representing the scene with given light properties
     @param light_direction: direction from which the light is coming in the scene
+    @param light_temp: (not used; always generates white light) light temperature that corresponds to its color
     @param height: height of the generated environment map
     @param width: width of the generated environment map
     @return: generated environment map with brightness gradient representing the light direction and color set 

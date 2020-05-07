@@ -1,4 +1,4 @@
-from torch import cat, randint, unique, FloatTensor
+from torch import cat, randint, unique, FloatTensor, no_grad
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -9,8 +9,6 @@ from torchvision.utils import make_grid
 from utils.metrics import psnr
 from models.swapModels import GroundtruthEnvmapSwapNet
 from models.loss import log_l2_loss
-from numpy import sum
-from tqdm import tqdm
 from utils.dataset import InputTargetGroundtruthWithGeneratedEnvmapDataset, DifferentScene, DifferentLightDirection, \
     VALIDATION_DATA_PATH
 from utils.storage import save_trained
@@ -155,44 +153,45 @@ for epoch in range(1, EPOCHS+1):
     del x, x_envmap, target, target_envmap, groundtruth, relit, pred_image_envmap, pred_target_envmap
 
     # Evaluate
-    model.eval()
-    test_loss_reconstruction = 0.0
-    test_loss_image_envmap, test_loss_target_envmap = 0.0, 0.0
-    test_psnr = 0.0
-    random_batch_id = randint(0, TEST_BATCHES, (1,))
-    for test_batch_idx, test_batch in enumerate(test_dataloader):
-        test_x = batch[0][0]['image'].to(device)
-        test_x_envmap = batch[0][1].to(device)
-        test_target = batch[1][0]['image'].to(device)
-        test_target_envmap = batch[1][1].to(device)
-        test_groundtruth = batch[2]['image'].to(device)
+    with no_grad():
+        model.eval()
+        test_loss_reconstruction = 0.0
+        test_loss_image_envmap, test_loss_target_envmap = 0.0, 0.0
+        test_psnr = 0.0
+        random_batch_id = randint(0, TEST_BATCHES, (1,))
+        for test_batch_idx, test_batch in enumerate(test_dataloader):
+            test_x = batch[0][0]['image'].to(device)
+            test_x_envmap = batch[0][1].to(device)
+            test_target = batch[1][0]['image'].to(device)
+            test_target_envmap = batch[1][1].to(device)
+            test_groundtruth = batch[2]['image'].to(device)
 
-        # Inference
-        test_relit, test_pred_image_envmap, test_pred_target_envmap = model(test_x, test_target, test_groundtruth)
+            # Inference
+            test_relit, test_pred_image_envmap, test_pred_target_envmap = model(test_x, test_target, test_groundtruth)
 
-        # Test loss
-        test_loss_reconstruction += reconstruction_loss(test_relit, test_groundtruth).item()
-        test_loss_image_envmap += envmap_loss(test_pred_image_envmap, test_x_envmap).item()
-        test_loss_target_envmap += envmap_loss(test_pred_target_envmap, test_target_envmap)
-        test_psnr += psnr(test_relit, test_groundtruth)
+            # Test loss
+            test_loss_reconstruction += reconstruction_loss(test_relit, test_groundtruth).item()
+            test_loss_image_envmap += envmap_loss(test_pred_image_envmap, test_x_envmap).item()
+            test_loss_target_envmap += envmap_loss(test_pred_target_envmap, test_target_envmap)
+            test_psnr += psnr(test_relit, test_groundtruth)
 
-        # Visualize random evaluation batch
-        if test_batch_idx == random_batch_id:
-            visualize(test_x, test_relit, test_groundtruth, test_target,
-                      test_pred_image_envmap, test_x_envmap, test_pred_target_envmap, test_target_envmap,
-                      epoch, 'Test')
+            # Visualize random evaluation batch
+            if test_batch_idx == random_batch_id:
+                visualize(test_x, test_relit, test_groundtruth, test_target,
+                          test_pred_image_envmap, test_x_envmap, test_pred_target_envmap, test_target_envmap,
+                          epoch, 'Test')
 
-    # Clean up memory
-    del test_x, test_x_envmap, test_target, test_target_envmap, test_groundtruth, test_relit, test_pred_image_envmap,\
-        test_pred_target_envmap
+        # Clean up memory
+        del test_x, test_x_envmap, test_target, test_target_envmap, test_groundtruth, test_relit, test_pred_image_envmap,\
+            test_pred_target_envmap
 
-    # Report test metrics
-    report_loss({
-        '1-Reconstruction': test_loss_reconstruction,
-        '2-Image-env-map': test_loss_image_envmap,
-        '3-Target-env-map': test_loss_target_envmap
-    }, epoch, 'Test')
-    report_metrics(test_psnr / TEST_SAMPLES, epoch, 'Test')
+        # Report test metrics
+        report_loss({
+            '1-Reconstruction': test_loss_reconstruction,
+            '2-Image-env-map': test_loss_image_envmap,
+            '3-Target-env-map': test_loss_target_envmap
+        }, epoch, 'Test')
+        report_metrics(test_psnr / TEST_SAMPLES, epoch, 'Test')
 
 # Store trained model
 save_trained(model, NAME)

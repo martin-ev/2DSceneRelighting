@@ -508,9 +508,22 @@ class SwapNet512x1x1(SwapNet):
             image_scene_latent, target_scene_latent, groundtruth_scene_latent = \
             super(SwapNet512x1x1, self).forward(image, target, ground_truth)
         return relit_image,\
-            image_light_latent.view(-1, 1, 4, 4), \
-            target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4), \
-            image_scene_latent, target_scene_latent, groundtruth_scene_latent
+        image_light_latent.view(-1, 1, 4, 4), target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4),\
+        image_scene_latent, target_scene_latent, groundtruth_scene_latent 
+    
+# =====================
+# IlluminationPredicter
+# =====================
+
+class IlluminationPredicter(nn.Module):
+    def __init__(self, in_size = 64*16*16, out_reals = 2):
+        super(IlluminationPredicter, self).__init__()
+        self.in_size = in_size
+        self.fc = nn.Linear(in_size, out_reals)
+    def forward(self, x):
+        x = x.view(-1, self.in_size)
+        return self.fc(x)
+        
 
 
 class GroundtruthEnvmapSwapNet(SwapNet):

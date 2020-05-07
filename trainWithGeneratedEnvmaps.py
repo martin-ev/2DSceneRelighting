@@ -28,8 +28,8 @@ BATCH_SIZE = 25
 NUM_WORKERS = 8
 EPOCHS = 30
 SIZE = 256
-SAMPLED_TRAIN_SAMPLES = 20000
-SAMPLED_TEST_SAMPLES = 2000
+SAMPLED_TRAIN_SAMPLES = 50000
+SAMPLED_TEST_SAMPLES = 5000
 
 # Configure training objects
 model = GroundtruthEnvmapSwapNet().to(device)
@@ -111,7 +111,7 @@ for epoch in range(1, EPOCHS+1):
     model.train()
     writer.add_text('Status', f'Training epoch {epoch}')
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
-    for batch_idx, batch in tqdm(enumerate(train_dataloader)):
+    for batch_idx, batch in enumerate(train_dataloader):
         x = batch[0][0]['image'].to(device)
         x_envmap = batch[0][1].to(device)
         target = batch[1][0]['image'].to(device)

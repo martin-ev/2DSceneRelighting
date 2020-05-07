@@ -87,9 +87,9 @@ def visualize(in_img, out_img, gt_img, target_img,
     writer.add_image(f'Visualization/{mode}/4-Target', make_grid(target_img[:SHOWN_SAMPLES]), step)
 
     input_envmaps = cat((in_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32),
-                         in_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32)), dim=0)
+                         in_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32) / 255), dim=0)
     target_envmaps = cat((target_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32),
-                          target_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32)), dim=0)
+                          target_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32) / 255), dim=0)
     writer.add_image(f'Env-map/{mode}/1-Input', make_grid(input_envmaps, nrow=SHOWN_SAMPLES), step)
     writer.add_image(f'Env-map/{mode}/2-Target', make_grid(target_envmaps, nrow=SHOWN_SAMPLES), step)
 

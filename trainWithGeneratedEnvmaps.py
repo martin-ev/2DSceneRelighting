@@ -109,7 +109,6 @@ train_step = 0
 for epoch in range(1, EPOCHS+1):
     # Train
     model.train()
-    writer.add_text('Status', f'Training epoch {epoch}')
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
     for batch_idx, batch in enumerate(train_dataloader):
         x = batch[0][0]['image'].to(device)
@@ -149,7 +148,6 @@ for epoch in range(1, EPOCHS+1):
 
     # Evaluate
     model.eval()
-    writer.add_text('Status', f'Evaluating epoch {epoch}')
     test_loss_reconstruction = 0.0
     test_loss_image_envmap, test_loss_target_envmap = 0.0, 0.0
     test_psnr = 0.0

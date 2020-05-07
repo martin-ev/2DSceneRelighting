@@ -78,6 +78,13 @@ TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 5
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 
 
+def normalize_image(latent):
+    # See: https://discuss.pytorch.org/t/current-torch-min-does-not-support-multiple-dimensions/55577/2
+    x = latent.view(-1, 1536)
+    x_min, x_max = x.min(dim=1), x.max(dim=1)
+    return ((latent - x_min) / (x_max - x_min)).view(-1, 3, 16, 32)
+
+
 def visualize(in_img, out_img, gt_img, target_img,
               in_envmap, in_gt_envmap, target_envmap, target_gt_envmap,
               step, mode='Train'):
@@ -86,10 +93,8 @@ def visualize(in_img, out_img, gt_img, target_img,
     writer.add_image(f'Visualization/{mode}/3-Ground-truth', make_grid(gt_img[:SHOWN_SAMPLES]), step)
     writer.add_image(f'Visualization/{mode}/4-Target', make_grid(target_img[:SHOWN_SAMPLES]), step)
 
-    input_envmaps = cat((in_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32),
-                         in_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32) / 255), dim=0)
-    target_envmaps = cat((target_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32),
-                          target_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32) / 255), dim=0)
+    input_envmaps = normalize_image(cat((in_envmap[:SHOWN_SAMPLES], in_gt_envmap[:SHOWN_SAMPLES]), dim=0))
+    target_envmaps = normalize_image(cat((target_envmap[:SHOWN_SAMPLES], target_gt_envmap[:SHOWN_SAMPLES]), dim=0))
     writer.add_image(f'Env-map/{mode}/1-Input', make_grid(input_envmaps, nrow=SHOWN_SAMPLES), step)
     writer.add_image(f'Env-map/{mode}/2-Target', make_grid(target_envmaps, nrow=SHOWN_SAMPLES), step)
 
@@ -146,6 +151,9 @@ for epoch in range(1, EPOCHS+1):
             train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
             train_step += 1
 
+    # Clean up memory (see: https://repl.it/@nickangtc/python-del-multiple-variables-in-single-line)
+    del x, x_envmap, target, target_envmap, groundtruth, relit, pred_image_envmap, pred_target_envmap
+
     # Evaluate
     model.eval()
     test_loss_reconstruction = 0.0
@@ -173,6 +181,10 @@ for epoch in range(1, EPOCHS+1):
             visualize(test_x, test_relit, test_groundtruth, test_target,
                       test_pred_image_envmap, test_x_envmap, test_pred_target_envmap, test_target_envmap,
                       epoch, 'Test')
+
+    # Clean up memory
+    del test_x, test_x_envmap, test_target, test_target_envmap, test_groundtruth, test_relit, test_pred_image_envmap,\
+        test_pred_target_envmap
 
     # Report test metrics
     report_loss({

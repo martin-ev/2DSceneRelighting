@@ -80,9 +80,10 @@ print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZAT
 
 def normalize_image(latent):
     # See: https://discuss.pytorch.org/t/current-torch-min-does-not-support-multiple-dimensions/55577/2
+    print(latent.size())
     x = latent.view(-1, 1536)
-    x_min, x_max = x.min(dim=1), x.max(dim=1)
-    return ((latent - x_min) / (x_max - x_min)).view(-1, 3, 16, 32)
+    x_min, x_max = x.min(dim=1)[0], x.max(dim=1)[0]
+    return ((x - x_min) / (x_max - x_min)).view(-1, 3, 16, 32)
 
 
 def visualize(in_img, out_img, gt_img, target_img,

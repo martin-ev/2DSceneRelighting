@@ -74,7 +74,7 @@ print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
-TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 100
+TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 5
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 
 
@@ -107,8 +107,6 @@ def report_metrics(psnr_value, step, mode='Test'):
 # Train loop
 train_step = 0
 for epoch in range(1, EPOCHS+1):
-    print(f'Epoch {epoch}:')
-
     # Train
     model.train()
     writer.add_text('Status', f'Training epoch {epoch}')

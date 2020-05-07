@@ -47,7 +47,7 @@ def start_tensorboard_process():
     Starts tensorboard process in the background.
     @return: object containing information about the tensorboard process such as its PID
     """
-    command = f'tensorboard --logdir {TENSORBOARD_LOG_DIR} --port {TENSORBOARD_PORT} &'
+    command = f'tensorboard --logdir {TENSORBOARD_LOG_DIR} --port {TENSORBOARD_PORT} --reload_multifile=true&'
     # see https://stackoverflow.com/a/19152273, https://stackoverflow.com/a/9935511 and
     # https://stackoverflow.com/a/4791612
     tensorboard_process = subprocess.Popen(command, shell=True, preexec_fn=os.setsid)

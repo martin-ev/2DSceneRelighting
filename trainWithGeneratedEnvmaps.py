@@ -19,12 +19,12 @@ from utils import tensorboard
 
 
 # Get used device
-GPU_IDS = [2]
+GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
 NAME = 'generated_envmaps_6500_reconstruction_and_envmap_loss'
-BATCH_SIZE = 15
+BATCH_SIZE = 25
 NUM_WORKERS = 8
 EPOCHS = 30
 SIZE = 256
@@ -75,16 +75,14 @@ writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
 TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 100
-TEST_VISUALIZATION_FREQ = TEST_SAMPLES // BATCH_SIZE // 20
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
-print(f'Evaluation will be performed every {TEST_VISUALIZATION_FREQ} train batches.')
 
 
 def visualize(in_img, out_img, gt_img, target_img,
               in_envmap, in_gt_envmap, target_envmap, target_gt_envmap,
               step, mode='Train'):
     writer.add_image(f'Visualization/{mode}/1-Input', make_grid(in_img[:SHOWN_SAMPLES]), step)
-    writer.add_image(f'Visualization/{mode}/2-Relighted', make_grid(out_img[:SHOWN_SAMPLES]), step)
+    writer.add_image(f'Visualization/{mode}/2-Relit', make_grid(out_img[:SHOWN_SAMPLES]), step)
     writer.add_image(f'Visualization/{mode}/3-Ground-truth', make_grid(gt_img[:SHOWN_SAMPLES]), step)
     writer.add_image(f'Visualization/{mode}/4-Target', make_grid(target_img[:SHOWN_SAMPLES]), step)
 
@@ -92,8 +90,8 @@ def visualize(in_img, out_img, gt_img, target_img,
                          in_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32)), dim=0)
     target_envmaps = cat((target_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32),
                           target_gt_envmap[:SHOWN_SAMPLES].view(-1, 3, 16, 32)), dim=0)
-    writer.add_image(f'Env-map/{mode}/1-Input', make_grid(input_envmaps), step)
-    writer.add_image(f'Env-map/{mode}/3-Target', make_grid(target_envmaps), step)
+    writer.add_image(f'Env-map/{mode}/1-Input', make_grid(input_envmaps, nrow=SHOWN_SAMPLES), step)
+    writer.add_image(f'Env-map/{mode}/2-Target', make_grid(target_envmaps, nrow=SHOWN_SAMPLES), step)
 
 
 def report_loss(components, step, mode='Train'):
@@ -101,7 +99,7 @@ def report_loss(components, step, mode='Train'):
     writer.add_scalars(f'Loss/{mode}/2-Components', components, step)
 
 
-def report_metrics(psnr_value, step, mode='Train'):
+def report_metrics(psnr_value, step, mode='Test'):
     writer.add_scalar(f'Metrics/{mode}/1-PSNR', psnr_value, step)
 
 
@@ -114,7 +112,6 @@ for epoch in range(1, EPOCHS+1):
     model.train()
     writer.add_text('Status', f'Training epoch {epoch}')
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
-    train_psnr = 0.0
     for batch_idx, batch in tqdm(enumerate(train_dataloader)):
         x = batch[0][0]['image'].to(device)
         x_envmap = batch[0][1]['image'].to(device)
@@ -134,21 +131,21 @@ for epoch in range(1, EPOCHS+1):
         loss.backward()
         optimizer.step()
 
-        # Train metrics
+        # Loss monitoring
         train_loss_reconstruction += loss_reconstruction.item()
         train_loss_envmap += loss_image_envmap.item() + loss_target_envmap.item()
-        train_psnr += psnr(relit, groundtruth)
 
         # Visualize current training progress
         if batch_idx % TRAIN_VISUALIZATION_FREQ == 0:
             visualize(x, relit, groundtruth, target,
                       pred_image_envmap, x_envmap, pred_target_envmap, target_envmap,
                       train_step, 'Train')
-            report_loss(train_loss_reconstruction, train_loss_envmap, train_step, 'Train')
-            report_metrics(train_psnr / (TRAIN_VISUALIZATION_FREQ * BATCH_SIZE), train_step, 'Train')
+            report_loss({
+                'Reconstruction': train_loss_reconstruction,
+                'Envmap': train_loss_envmap,
+            }, train_step, 'Train')
 
             train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
-            train_psnr = 0.0
             train_step += 1
 
     # Evaluate

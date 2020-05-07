@@ -1,4 +1,4 @@
-from torch import cat, randint, unique
+from torch import cat, randint, unique, FloatTensor
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -95,7 +95,8 @@ def visualize(in_img, out_img, gt_img, target_img,
 
 
 def report_loss(components, step, mode='Train'):
-    writer.add_scalar(f'Loss/{mode}/1-Total', sum(components.values()), step)
+    total = FloatTensor(list(components.values())).sum()
+    writer.add_scalar(f'Loss/{mode}/1-Total', total, step)
     writer.add_scalars(f'Loss/{mode}/2-Components', components, step)
 
 

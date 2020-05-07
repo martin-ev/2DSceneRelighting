@@ -114,9 +114,9 @@ for epoch in range(1, EPOCHS+1):
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
     for batch_idx, batch in tqdm(enumerate(train_dataloader)):
         x = batch[0][0]['image'].to(device)
-        x_envmap = batch[0][1]['image'].to(device)
+        x_envmap = batch[0][1].to(device)
         target = batch[1][0]['image'].to(device)
-        target_envmap = batch[1][1]['image'].to(device)
+        target_envmap = batch[1][1].to(device)
         groundtruth = batch[2]['image'].to(device)
 
         # Forward
@@ -157,9 +157,9 @@ for epoch in range(1, EPOCHS+1):
     random_batch_id = randint(0, TEST_BATCHES, (1,))
     for test_batch_idx, test_batch in enumerate(test_dataloader):
         test_x = batch[0][0]['image'].to(device)
-        test_x_envmap = batch[0][1]['image'].to(device)
+        test_x_envmap = batch[0][1].to(device)
         test_target = batch[1][0]['image'].to(device)
-        test_target_envmap = batch[1][1]['image'].to(device)
+        test_target_envmap = batch[1][1].to(device)
         test_groundtruth = batch[2]['image'].to(device)
 
         # Inference

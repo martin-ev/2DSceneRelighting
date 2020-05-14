@@ -315,17 +315,14 @@ class InputTargetGroundtruthWithGeneratedEnvmapDataset(InputTargetGroundtruthDat
             pairing_strategies)
 
         # Generate ground-truth envmaps
-        light_directions = unique(self.input_directions + self.target_directions)
-        light_colors = unique(input_colors + target_colors)
-        self.ground_truth_envmaps = self._generate_ground_truth_envmaps(
-            light_directions, light_colors, envmap_h, envmap_w)
+        self.ground_truth_envmaps = self._generate_ground_truth_envmaps(envmap_h, envmap_w)
 
     @staticmethod
-    def _generate_ground_truth_envmaps(light_directions, light_colors, envmap_h, envmap_w):
+    def _generate_ground_truth_envmaps(envmap_h, envmap_w):
         envmaps = {}
-        for direction in light_directions:
-            for color in light_colors:
-                envmaps[(direction, color)] = generate_envmap(direction, color, envmap_h, envmap_w)
+        for direction in ALL_DIRECTIONS:
+            for color in ALL_COLORS:
+                envmaps[(direction, int(color))] = generate_envmap(direction, int(color), envmap_h, envmap_w)
         return envmaps
 
     def __getitem__(self, idx):

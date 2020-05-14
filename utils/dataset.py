@@ -18,14 +18,14 @@ ALL_LOCATIONS = ["scene_abandonned_city_54", "scene_artic_mountains_32", "scene_
                  "scene_city_24", "scene_fantasy_village_21", "scene_subway_2"]
 ALL_DIRECTIONS = ["NW", "N", "NE", "E", "SE", "S", "SW", "W"]
 ALL_COLORS = ["2500", "3500", "4500", "5500", "6500"]
-ANGLES = {'S': 0,
-          'SE': 45,
-          'E': 90,
-          'NE': 135,
-          'N': 180,
-          'NW': 225,
-          'W': 270,
-          'SW': 315,
+ANGLES = {'S': 0.,
+          'SE': 45.,
+          'E': 90.,
+          'NE': 135.,
+          'N': 180.,
+          'NW': 225.,
+          'W': 270.,
+          'SW': 315.,
           }
 
 
@@ -33,7 +33,7 @@ class Sample:
     def __init__(self, path, location, color, direction, scene):
         self.path = path
         self.location = location
-        self.color = color
+        self.color = int(color)
         self.direction = direction
         self.scene = scene
         
@@ -53,7 +53,7 @@ class Image:
     
     def as_dict(self):
         dico = {'location': self.location,
-                'color': int(self.color),
+                'color': self.color,
                 'direction': self.dir_to_angle(self.direction),
                 'scene': self.scene,
                 'image': self.image
@@ -114,7 +114,7 @@ class ImageDataset(torch.utils.data.Dataset):
         return all_scenes
 
     def _load_samples(self, data_path, location, color, direction):
-        directory = os.path.join(data_path, location, color, direction)
+        directory = os.path.join(data_path, location, str(color), direction)
         current_dataset = self.get_current_dataset(data_path, location, color, direction)
 
         samples = []
@@ -130,7 +130,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
     @staticmethod
     def get_current_dataset(data_path, location, color, direction):
-        directory = os.path.join(data_path, location, color, direction)
+        directory = os.path.join(data_path, location, str(color), direction)
         csv_file = os.path.join(directory, f"dataset_{color}_{direction}.csv")
         return pd.read_csv(csv_file)
 
@@ -192,6 +192,9 @@ class DifferentScene(PairingStrategy):
 
     def can_be_paired(self, input_sample, target_sample):
         return input_sample.scene != target_sample.scene
+    
+    def __repr__(self):
+        return 'DifferentScene'
 
 
 class DifferentLightDirection(PairingStrategy):
@@ -201,12 +204,18 @@ class DifferentLightDirection(PairingStrategy):
     def can_be_paired(self, input_sample, target_sample):
         return input_sample.direction != target_sample.direction
     
+    def __repr__(self):
+        return 'DifferentLightDirection'
+    
 class SameScene(PairingStrategy):
     def __init__(self):
         super(SameScene, self).__init__()
 
     def can_be_paired(self, input_sample, target_sample):
         return input_sample.scene == target_sample.scene
+    
+    def __repr__(self):
+        return 'SameScene'
 
 
 class SameLightDirection(PairingStrategy):
@@ -216,12 +225,18 @@ class SameLightDirection(PairingStrategy):
     def can_be_paired(self, input_sample, target_sample):
         return input_sample.direction == target_sample.direction
     
+    def __repr__(self):
+        return 'SameLightDirection'
+    
 class SameLightColor(PairingStrategy):
     def __init__(self):
-        super(SameLightDirection, self).__init__()
+        super(SameLightColor, self).__init__()
 
     def can_be_paired(self, input_sample, target_sample):
         return input_sample.color == target_sample.color
+    
+    def __repr__(self):
+        return 'SameLightColor'
 
 
 class InputTargetGroundtruthDataset(ImageDataset):
@@ -259,7 +274,7 @@ class InputTargetGroundtruthDataset(ImageDataset):
 
     def _can_be_paired(self, input_sample, target_sample):
         for strategy in self.pairing_strategies:
-            if not strategy.can_be_paired(self, input_sample, target_sample):
+            if not strategy.can_be_paired(input_sample, target_sample):
                 return False
         return True
 
@@ -296,7 +311,7 @@ class InputTargetGroundtruthWithGeneratedEnvmapDataset(InputTargetGroundtruthDat
             pairing_strategies)
 
         # Generate ground-truth envmaps
-        light_directions = unique(input_directions + target_directions)
+        light_directions = unique(self.input_directions + self.target_directions)
         light_colors = unique(input_colors + target_colors)
         self.ground_truth_envmaps = self._generate_ground_truth_envmaps(
             light_directions, light_colors, envmap_h, envmap_w)

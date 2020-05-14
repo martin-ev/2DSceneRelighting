@@ -55,14 +55,23 @@ class DirectionPredictionLoss(_SimpleLoss):
     def __init__(self, p=2):
         factor = _FACTORS[p](1/90)
         super().__init__(p=p, factor=factor)
-
-class SceneLatentLoss(_SimpleLossWithRef):    
+        
+class SceneLatentLoss(_SimpleLoss):    
     def __init__(self, p=2):
         super().__init__(p=p)
         
-class LightLatentLoss(_SimpleLossWithRef):    
+class LightLatentLoss(_SimpleLoss):    
     def __init__(self, p=2):
         super().__init__(p=p)
+
+class SceneLatentLossWithRef(_SimpleLossWithRef):    
+    def __init__(self, p=2):
+        super().__init__(p=p)
+        
+class LightLatentLossWithRef(_SimpleLossWithRef):    
+    def __init__(self, p=2):
+        super().__init__(p=p)
+        
         
 class GANLoss(_Loss):    
     def __init__(self):
@@ -77,3 +86,4 @@ class FoolGANLoss(_Loss):
         self.distance = nn.MSELoss()
     def forward(self, disc_out_fake):
         return self.distance(disc_out_fake, torch.ones(disc_out_fake.size()).to(disc_out_fake.device))
+

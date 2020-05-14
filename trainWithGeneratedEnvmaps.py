@@ -21,12 +21,12 @@ GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'generated_envmaps_6500_reconstruction_and_envmap_loss'
+NAME = 'generated_envmaps_all_reconstruction_and_envmap_loss'
 BATCH_SIZE = 25
 NUM_WORKERS = 8
 EPOCHS = 30
 SIZE = 256
-SAMPLED_TRAIN_SAMPLES = 50000
+SAMPLED_TRAIN_SAMPLES = 100000
 SAMPLED_TEST_SAMPLES = 5000
 
 # Configure training objects
@@ -40,13 +40,9 @@ envmap_loss = log_l2_loss
 # Configure data sets
 transform = Resize(SIZE)
 pairing_strategies = [DifferentScene(), DifferentLightDirection()]
-train_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(input_colors=[6500],
-                                                                 target_colors=[6500],
-                                                                 transform=transform,
+train_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(transform=transform,
                                                                  pairing_strategies=pairing_strategies)
 test_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(data_path=VALIDATION_DATA_PATH,
-                                                                input_colors=[6500],
-                                                                target_colors=[6500],
                                                                 transform=transform,
                                                                 pairing_strategies=pairing_strategies)
 
@@ -160,11 +156,11 @@ for epoch in range(1, EPOCHS+1):
         test_psnr = 0.0
         random_batch_id = randint(0, TEST_BATCHES, (1,))
         for test_batch_idx, test_batch in enumerate(test_dataloader):
-            test_x = batch[0][0]['image'].to(device)
-            test_x_envmap = batch[0][1].to(device)
-            test_target = batch[1][0]['image'].to(device)
-            test_target_envmap = batch[1][1].to(device)
-            test_groundtruth = batch[2]['image'].to(device)
+            test_x = test_batch[0][0]['image'].to(device)
+            test_x_envmap = test_batch[0][1].to(device)
+            test_target = test_batch[1][0]['image'].to(device)
+            test_target_envmap = test_batch[1][1].to(device)
+            test_groundtruth = test_batch[2]['image'].to(device)
 
             # Inference
             test_relit, test_pred_image_envmap, test_pred_target_envmap = model(test_x, test_target, test_groundtruth)

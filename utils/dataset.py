@@ -18,15 +18,16 @@ ALL_LOCATIONS = ["scene_abandonned_city_54", "scene_artic_mountains_32", "scene_
                  "scene_city_24", "scene_fantasy_village_21", "scene_subway_2"]
 ALL_DIRECTIONS = ["NW", "N", "NE", "E", "SE", "S", "SW", "W"]
 ALL_COLORS = ["2500", "3500", "4500", "5500", "6500"]
-ANGLES = {'S': 0.,
-          'SE': 45.,
-          'E': 90.,
-          'NE': 135.,
-          'N': 180.,
-          'NW': 225.,
-          'W': 270.,
-          'SW': 315.,
-          }
+ANGLES = {
+    'S': 0.,
+    'SE': 45.,
+    'E': 90.,
+    'NE': 135.,
+    'N': 180.,
+    'NW': 225.,
+    'W': 270.,
+    'SW': 315.
+}
 
 
 class Sample:
@@ -52,12 +53,13 @@ class Image:
         return self.transform(img)[:3, :, :]
     
     def as_dict(self):
-        dico = {'location': self.location,
-                'color': self.color,
-                'direction': self.dir_to_angle(self.direction),
-                'scene': self.scene,
-                'image': self.image
-                }
+        dico = {
+            'location': self.location,
+            'color': self.color,
+            'direction': self.dir_to_angle(self.direction),
+            'scene': self.scene,
+            'image': self.image
+        }
         return dico
     
     @staticmethod        
@@ -206,7 +208,8 @@ class DifferentLightDirection(PairingStrategy):
     
     def __repr__(self):
         return 'DifferentLightDirection'
-    
+
+
 class SameScene(PairingStrategy):
     def __init__(self):
         super(SameScene, self).__init__()
@@ -227,7 +230,8 @@ class SameLightDirection(PairingStrategy):
     
     def __repr__(self):
         return 'SameLightDirection'
-    
+
+
 class SameLightColor(PairingStrategy):
     def __init__(self):
         super(SameLightColor, self).__init__()

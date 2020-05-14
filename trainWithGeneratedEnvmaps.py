@@ -156,11 +156,11 @@ for epoch in range(1, EPOCHS+1):
         test_psnr = 0.0
         random_batch_id = randint(0, TEST_BATCHES, (1,))
         for test_batch_idx, test_batch in enumerate(test_dataloader):
-            test_x = batch[0][0]['image'].to(device)
-            test_x_envmap = batch[0][1].to(device)
-            test_target = batch[1][0]['image'].to(device)
-            test_target_envmap = batch[1][1].to(device)
-            test_groundtruth = batch[2]['image'].to(device)
+            test_x = test_batch[0][0]['image'].to(device)
+            test_x_envmap = test_batch[0][1].to(device)
+            test_target = test_batch[1][0]['image'].to(device)
+            test_target_envmap = test_batch[1][1].to(device)
+            test_groundtruth = test_batch[2]['image'].to(device)
 
             # Inference
             test_relit, test_pred_image_envmap, test_pred_target_envmap = model(test_x, test_target, test_groundtruth)

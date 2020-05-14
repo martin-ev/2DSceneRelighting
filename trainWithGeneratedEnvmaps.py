@@ -21,12 +21,12 @@ GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'generated_envmaps_6500_reconstruction_and_envmap_loss'
+NAME = 'generated_envmaps_all_reconstruction_and_envmap_loss'
 BATCH_SIZE = 25
 NUM_WORKERS = 8
 EPOCHS = 30
 SIZE = 256
-SAMPLED_TRAIN_SAMPLES = 50000
+SAMPLED_TRAIN_SAMPLES = 100000
 SAMPLED_TEST_SAMPLES = 5000
 
 # Configure training objects
@@ -40,13 +40,9 @@ envmap_loss = log_l2_loss
 # Configure data sets
 transform = Resize(SIZE)
 pairing_strategies = [DifferentScene(), DifferentLightDirection()]
-train_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(input_colors=[6500],
-                                                                 target_colors=[6500],
-                                                                 transform=transform,
+train_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(transform=transform,
                                                                  pairing_strategies=pairing_strategies)
 test_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(data_path=VALIDATION_DATA_PATH,
-                                                                input_colors=[6500],
-                                                                target_colors=[6500],
                                                                 transform=transform,
                                                                 pairing_strategies=pairing_strategies)
 

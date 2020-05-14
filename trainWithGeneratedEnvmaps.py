@@ -1,5 +1,7 @@
-from torch import cat, randint, unique, FloatTensor, no_grad
 import torch.nn as nn
+import argparse
+
+from torch import cat, randint, unique, FloatTensor, no_grad
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
@@ -28,6 +30,9 @@ EPOCHS = 30
 SIZE = 256
 SAMPLED_TRAIN_SAMPLES = 100000
 SAMPLED_TEST_SAMPLES = 5000
+
+# Arguments
+parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
 
 # Configure training objects
 model = GroundtruthEnvmapSwapNet().to(device)

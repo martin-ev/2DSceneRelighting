@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision.transforms import Resize
 from torchvision.utils import make_grid
+from tqdm import tqdm
 
 from utils.metrics import psnr
 from models.swapModels import GroundtruthEnvmapSwapNet
@@ -114,7 +115,7 @@ for epoch in range(1, EPOCHS+1):
     # Train
     model.train()
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
-    for batch_idx, batch in enumerate(train_dataloader):
+    for batch_idx, batch in tqdm(enumerate(train_dataloader)):
         x = batch[0][0]['image'].to(device)
         x_envmap = batch[0][1].to(device)
         target = batch[1][0]['image'].to(device)

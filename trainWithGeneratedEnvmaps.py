@@ -1,5 +1,5 @@
 import torch.nn as nn
-# import argparse
+import argparse
 
 from torch import cat, randint, unique, FloatTensor, no_grad
 from torch.optim import Adam
@@ -32,12 +32,25 @@ SAMPLED_TRAIN_SAMPLES = 100000
 SAMPLED_TEST_SAMPLES = 5000
 
 # Arguments
-# parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
-# parser.add_argument('-d', '--disabled-skip-connections',
-#                     help='Numbers of encoder layers that will not be propagated to the decoder as skip connections')
+parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
+parser.add_argument('-d', '--disabled-skip-connections',
+                    dest='disabled_skip_connections',
+                    nargs='*',
+                    action='append',
+                    default=[],
+                    help='Numbers of encoder layers that will not be propagated to the decoder as skip connections')
+parser.add_argument('-a', '--add-target-skip-connections',
+                    dest='target_skip_connections',
+                    nargs='*',
+                    action='append',
+                    default=[])
+ARGUMENTS = parser.parse_args()
+
 
 # Configure training objects
-model = GroundtruthEnvmapSwapNet().to(device)
+model = GroundtruthEnvmapSwapNet(
+    disabled_skip_connections=ARGUMENTS.disabled_skip_connections
+).to(device)
 optimizer = Adam(model.parameters())
 
 # Losses

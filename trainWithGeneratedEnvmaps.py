@@ -49,7 +49,8 @@ ARGUMENTS = parser.parse_args()
 
 # Configure training objects
 model = GroundtruthEnvmapSwapNet(
-    disabled_skip_connections=ARGUMENTS.disabled_skip_connections
+    disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections,
+    target_skip_connections_ids=ARGUMENTS.target_skip_connections
 ).to(device)
 optimizer = Adam(model.parameters())
 

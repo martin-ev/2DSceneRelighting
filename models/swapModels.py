@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 from abc import ABC
-from numpy import array, abs
+from numpy import array, setdiff1d
 
 
 EMPTY_TENSOR = torch.Tensor()
@@ -435,19 +435,28 @@ class Decoder(nn.Module):
 class SwapNet(nn.Module):
     def __init__(self, splitter, assembler,
                  n_double_conv=3, bottleneck_depth=4, last_kernel_size=3,
-                 disabled_skip_connections=None):
+                 disabled_skip_connections_ids=None, target_skip_connections_ids=None):
         super(SwapNet, self).__init__()
-        disabled_skip_connections = array([]) if disabled_skip_connections is None else array(disabled_skip_connections)
 
-        self.encode = Encoder(n_double_conv, bottleneck_depth, disabled_skip_connections)
+        # Skip connections setup
+        disabled_skip_connections_ids = array([]) if disabled_skip_connections_ids is None \
+            else array(disabled_skip_connections_ids)
+        self.target_skip_connections_ids = array([]) if target_skip_connections_ids is None \
+            else array(target_skip_connections_ids)
+        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
+        decoder_disabled_skip_connections_ids = self.get_decoder_disabled_skip_connection_ids(
+            disabled_skip_connections_ids
+        )
+
+        # Network architecture
+        self.encode = Encoder(n_double_conv, bottleneck_depth, disabled_skip_connections_ids)
         self.split = splitter
         self.assemble = assembler
+        self.decode = Decoder(n_double_conv, bottleneck_depth, last_kernel_size, decoder_disabled_skip_connections_ids)
 
-        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
+    def get_decoder_disabled_skip_connection_ids(self, disabled_skip_connections_ids):
         n = self.encode.get_number_of_possible_skip_connections()
-        decoder_disabled_skip_connections = (n - 1) - disabled_skip_connections
-        self.decode = Decoder(n_double_conv, bottleneck_depth, last_kernel_size,
-                              decoder_disabled_skip_connections)
+        return (n - 1) - setdiff1d(disabled_skip_connections_ids, self.target_skip_connections_ids)
 
     def forward(self, image, target, groundtruth):
         # pass image through encoder
@@ -455,6 +464,7 @@ class SwapNet(nn.Module):
         image_skip_connections = self.encode.get_skip_connections()
         # pass target through encoder
         target_latent = self.encode(target)
+        target_skip_connections = self.encode.get_skip_connections()
         # pass ground-truth through encoder
         groundtruth_latent = self.encode(groundtruth)
         
@@ -467,8 +477,11 @@ class SwapNet(nn.Module):
         
         swapped_latent = self.assemble(image_scene_latent, target_light_latent)
 
+        # replace appropriate image skip connections with target skip connections
+        skip_connections = self.merge_skip_connections(image_skip_connections, target_skip_connections)
+
         # decode image with target env map
-        relit_image = self.decode(swapped_latent, image_skip_connections)
+        relit_image = self.decode(swapped_latent, skip_connections)
         
         # decode image with its env map
         # reconstructed_image = self.decode(image_env_map, image_skip_connections)
@@ -480,9 +493,20 @@ class SwapNet(nn.Module):
             image_light_latent, target_light_latent, groundtruth_light_latent, \
             image_scene_latent, target_scene_latent, groundtruth_scene_latent
 
+    def merge_skip_connections(self, image_skip_connections, target_skip_connections):
+        skip_connections = []
+        for i, (image_skip_connection, target_skip_connection) in enumerate(zip(image_skip_connections,
+                                                                                target_skip_connections)):
+            if i in self.target_skip_connections_ids:
+                skip_connections.append(target_skip_connection)
+            else:
+                skip_connections.append(image_skip_connection)
+        return skip_connections
+
 
 class IlluminationSwapNet(SwapNet):
-    def __init__(self, last_kernel_size=3, disabled_skip_connections=None):
+    def __init__(self, last_kernel_size=3,
+                 disabled_skip_connections_ids=None, target_skip_connections_ids=None):
         """
         Illumination swap network model based on "Single Image Portrait Relighting" (Sun et al., 2019).
         Autoencoder accepts two images as inputs - one to be relit and one representing target lighting conditions.
@@ -493,7 +517,8 @@ class IlluminationSwapNet(SwapNet):
         super(IlluminationSwapNet, self).__init__(splitter=IlluminationSwapNetSplitter(),
                                                   assembler=IlluminationSwapNetAssembler(),
                                                   last_kernel_size=last_kernel_size,
-                                                  disabled_skip_connections=disabled_skip_connections)
+                                                  disabled_skip_connections_ids=disabled_skip_connections_ids,
+                                                  target_skip_connections_ids=target_skip_connections_ids)
 
     def forward(self, image, target, ground_truth):
         relit_image, \
@@ -507,22 +532,26 @@ class IlluminationSwapNet(SwapNet):
 
 
 class AnOtherSwapNet(SwapNet):
-    def __init__(self, last_kernel_size=3, disabled_skip_connections=None):
+    def __init__(self, last_kernel_size=3,
+                 disabled_skip_connections_ids=None, target_skip_connections_ids=None):
         super(AnOtherSwapNet, self).__init__(splitter=AnOtherSwapNetSplitter(),
                                              assembler=AnOtherSwapNetAssembler(),
                                              last_kernel_size=last_kernel_size,
-                                             disabled_skip_connections=disabled_skip_connections)
+                                             disabled_skip_connections_ids=disabled_skip_connections_ids,
+                                             target_skip_connections_ids=target_skip_connections_ids)
 
     def forward(self, image, target, ground_truth):
         return super(AnOtherSwapNet, self).forward(image, target, ground_truth)
 
 
 class SwapNet512x1x1(SwapNet):
-    def __init__(self, last_kernel_size=3, disabled_skip_connections=None):
+    def __init__(self, last_kernel_size=3,
+                 disabled_skip_connections_ids=None, target_skip_connections_ids=None):
         super(SwapNet512x1x1, self).__init__(splitter=Splitter512x1x1(),
                                              assembler=Assembler512x1x1(),
                                              last_kernel_size=last_kernel_size,
-                                             disabled_skip_connections=disabled_skip_connections)
+                                             disabled_skip_connections_ids=disabled_skip_connections_ids,
+                                             target_skip_connections_ids=target_skip_connections_ids)
 
     def forward(self, image, target, ground_truth):
         relit_image, \
@@ -533,21 +562,6 @@ class SwapNet512x1x1(SwapNet):
             image_light_latent.view(-1, 1, 4, 4), \
             target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4),\
             image_scene_latent, target_scene_latent, groundtruth_scene_latent
-
-
-# =====================
-# IlluminationPredictor
-# =====================
-
-#class IlluminationPredicter(nn.Module):
-#    def __init__(self, in_size=64*16*16, out_reals=2):
-#        super(IlluminationPredicter, self).__init__()
-#        self.in_size = in_size
-#        self.fc = nn.Linear(in_size, out_reals)
-#
-#    def forward(self, x):
-#        x = x.view(-1, self.in_size)
-#        return self.fc(x)
         
 
 class GroundtruthEnvmapSwapNet(SwapNet):
@@ -559,10 +573,11 @@ class GroundtruthEnvmapSwapNet(SwapNet):
     representations are swapped so that the decoder, using U-Net-like skip connections from the encoder,
     generates image with the original content but under the lighting conditions of the second input.
     """
-    def __init__(self, disabled_skip_connections=None):
+    def __init__(self, disabled_skip_connections_ids=None, target_skip_connections_ids=None):
         super(GroundtruthEnvmapSwapNet, self).__init__(splitter=IlluminationSwapNetSplitter(),
                                                        assembler=IlluminationSwapNetAssembler(),
-                                                       disabled_skip_connections=disabled_skip_connections)
+                                                       disabled_skip_connections_ids=disabled_skip_connections_ids,
+                                                       target_skip_connections_ids=target_skip_connections_ids)
 
     def forward(self, image, target, groundtruth):
         # pass image & target through encoder
@@ -570,17 +585,30 @@ class GroundtruthEnvmapSwapNet(SwapNet):
         image_skip_connections = self.encode.get_skip_connections()
         _, predicted_image_envmap = self.split(image_latent)
         target_latent = self.encode(target)
+        target_skip_connections = self.encode.get_skip_connections()
         _, predicted_target_envmap = self.split(target_latent)
 
-        # decode from target envmap ground-truth using image skip connections
+        # decode from target envmap ground-truth using merged skip connections
         swapped_latent = self.assemble(None, predicted_target_envmap)
-        relit_image = self.decode(swapped_latent, image_skip_connections)
+        skip_connections = self.merge_skip_connections(image_skip_connections, target_skip_connections)
+        relit_image = self.decode(swapped_latent, skip_connections)
 
         return relit_image, predicted_image_envmap, predicted_target_envmap  
     
 # =====================
 # IlluminationPredicter
 # =====================
+
+# class IlluminationPredicter(nn.Module):
+#     def __init__(self, in_size=64*16*16, out_reals=2):
+#         super(IlluminationPredicter, self).__init__()
+#         self.in_size = in_size
+#         self.fc = nn.Linear(in_size, out_reals)
+#
+#     def forward(self, x):
+#         x = x.view(-1, self.in_size)
+#         return self.fc(x)
+
 
 class IlluminationPredicter(nn.Module):
     def __init__(self, in_size = 64*16*16, out_reals = 2):
@@ -596,4 +624,3 @@ class IlluminationPredicter(nn.Module):
     def forward(self, x):
         x = x.view(-1, self.in_size)
         return self.fc(x)
-       

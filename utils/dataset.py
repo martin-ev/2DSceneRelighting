@@ -5,7 +5,6 @@ import torchvision
 
 from abc import ABC, abstractmethod  # https://www.python-course.eu/python3_abstract_classes.php
 from .envmap import generate_envmap
-from numpy import unique
 from PIL import Image as PILImage
 from tqdm import tqdm
 
@@ -266,7 +265,6 @@ class InputTargetGroundtruthDataset(ImageDataset):
         # Associate (input, target) to correct ground-truth
         print("- Associating input, target and ground-truth samples") 
         self.items = []
-        print(len(self.target_samples))
 
         for input_sample in tqdm(self.input_samples):
             for target_sample in self.target_samples:

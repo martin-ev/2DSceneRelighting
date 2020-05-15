@@ -1,5 +1,5 @@
 import torch.nn as nn
-import argparse
+# import argparse
 
 from torch import cat, randint, unique, FloatTensor, no_grad
 from torch.optim import Adam
@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision.transforms import Resize
 from torchvision.utils import make_grid
-from tqdm import tqdm
 
 from utils.metrics import psnr
 from models.swapModels import GroundtruthEnvmapSwapNet
@@ -33,7 +32,9 @@ SAMPLED_TRAIN_SAMPLES = 100000
 SAMPLED_TEST_SAMPLES = 5000
 
 # Arguments
-parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
+# parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
+# parser.add_argument('-d', '--disabled-skip-connections',
+#                     help='Numbers of encoder layers that will not be propagated to the decoder as skip connections')
 
 # Configure training objects
 model = GroundtruthEnvmapSwapNet().to(device)
@@ -115,7 +116,7 @@ for epoch in range(1, EPOCHS+1):
     # Train
     model.train()
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
-    for batch_idx, batch in tqdm(enumerate(train_dataloader)):
+    for batch_idx, batch in enumerate(train_dataloader):
         x = batch[0][0]['image'].to(device)
         x_envmap = batch[0][1].to(device)
         target = batch[1][0]['image'].to(device)

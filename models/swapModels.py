@@ -443,15 +443,16 @@ class SwapNet(nn.Module):
             else array(disabled_skip_connections_ids)
         self.target_skip_connections_ids = array([]) if target_skip_connections_ids is None \
             else array(target_skip_connections_ids)
-        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
-        decoder_disabled_skip_connections_ids = self.get_decoder_disabled_skip_connection_ids(
-            disabled_skip_connections_ids
-        )
 
         # Network architecture
         self.encode = Encoder(n_double_conv, bottleneck_depth, disabled_skip_connections_ids)
         self.split = splitter
         self.assemble = assembler
+        
+        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
+        decoder_disabled_skip_connections_ids = self.get_decoder_disabled_skip_connection_ids(
+            disabled_skip_connections_ids
+        )
         self.decode = Decoder(n_double_conv, bottleneck_depth, last_kernel_size, decoder_disabled_skip_connections_ids)
 
     def get_decoder_disabled_skip_connection_ids(self, disabled_skip_connections_ids):

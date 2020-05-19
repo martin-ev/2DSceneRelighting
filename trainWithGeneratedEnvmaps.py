@@ -53,6 +53,9 @@ model = GroundtruthEnvmapSwapNet(
     target_skip_connections_ids=ARGUMENTS.target_skip_connections
 ).to(device)
 optimizer = Adam(model.parameters())
+print('Model:', model.__class__.__name__)
+print('Disabled skip connections:', ARGUMENTS.disabled_skip_connections)
+print('Target skip connections:', ARGUMENTS.target_skip_connections)
 
 # Losses
 reconstruction_loss = nn.L1Loss()
@@ -130,7 +133,10 @@ for epoch in range(1, EPOCHS+1):
     # Train
     model.train()
     train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
+    n_batches_since_visualization = 0
     for batch_idx, batch in enumerate(train_dataloader):
+        n_batches_since_visualization += 1
+
         x = batch[0][0]['image'].to(device)
         x_envmap = batch[0][1].to(device)
         target = batch[1][0]['image'].to(device)
@@ -159,11 +165,12 @@ for epoch in range(1, EPOCHS+1):
                       pred_image_envmap, x_envmap, pred_target_envmap, target_envmap,
                       train_step, 'Train')
             report_loss({
-                'Reconstruction': train_loss_reconstruction,
-                'Envmap': train_loss_envmap,
+                'Reconstruction': train_loss_reconstruction / n_batches_since_visualization,
+                'Envmap': train_loss_envmap / n_batches_since_visualization,
             }, train_step, 'Train')
 
             train_loss_reconstruction, train_loss_envmap = 0.0, 0.0
+            n_batches_since_visualization = 0
             train_step += 1
 
     # Clean up memory (see: https://repl.it/@nickangtc/python-del-multiple-variables-in-single-line)
@@ -204,9 +211,9 @@ for epoch in range(1, EPOCHS+1):
 
         # Report test metrics
         report_loss({
-            '1-Reconstruction': test_loss_reconstruction,
-            '2-Image-env-map': test_loss_image_envmap,
-            '3-Target-env-map': test_loss_target_envmap
+            '1-Reconstruction': test_loss_reconstruction / TEST_BATCHES,
+            '2-Image-env-map': test_loss_image_envmap / TEST_BATCHES,
+            '3-Target-env-map': test_loss_target_envmap / TEST_BATCHES
         }, epoch, 'Test')
         report_metrics(test_psnr / TEST_SAMPLES, epoch, 'Test')
 

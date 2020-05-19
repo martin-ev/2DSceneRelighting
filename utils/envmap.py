@@ -1,6 +1,5 @@
 from torch import zeros, from_numpy, cat
 from math import sqrt, e
-from colour import CCT_to_xy, xy_to_XYZ, XYZ_to_RGB
 from numpy import array
 
 
@@ -15,20 +14,15 @@ ROTATIONS = {
     'NW': -0.25
 }
 
-# conversion matrix from color-science example:
-# https://www.colour-science.org/api/0.3.6/html/colour.models.rgb.html?highlight=primary
-XYZ_to_RGB_matrix = array([
-    [3.24100326, -1.53739899, -0.49861587],
-    [-0.96922426, 1.87592999, 0.04155422],
-    [0.05563942, -0.20401120, 1.05714897]
-])
 
-# Inverse of RGB to XYZ matrix from lecture notes
-# array([
-#     [2.36461, -0.896541, -0.468073],
-#     [-0.515166, 1.42641, 0.0887581],
-#     [0.0052037, -0.0144082, 1.0092]
-# ])
+# Generated with colour-science, see others/EnvmapGeneration.ipynb
+COLOURS = {
+    2500: array([255, 202,  46]),
+    3500: array([255, 229,  96]),
+    4500: array([255, 244, 155]),
+    5500: array([255, 251, 209]),
+    6500: array([254, 255, 254])
+}
 
 
 def generate_envmap(light_direction, light_temp, height=16, width=32):
@@ -41,8 +35,7 @@ def generate_envmap(light_direction, light_temp, height=16, width=32):
     @return: generated environment map with brightness gradient representing the light direction and color set 
     appropriately according to the light temperature
     """
-    # TODO: render correct color
-    light_rgb = array([255., 255., 255.])
+    light_rgb = COLOURS[light_temp]
     centered_envmap = _envmap_with_centered_light(light_rgb, height, width)
     rotated_envmap = _rotate_envmap_to_match_direction(centered_envmap, light_direction)
     return rotated_envmap.view(3 * height * width, 1, 1)
@@ -67,13 +60,6 @@ def _rotate_envmap_to_match_direction(centered_envmap, light_direction):
     max_shift = width // 2
     shift = int(max_shift * rotation)
     return cat((centered_envmap[:, :, -shift:], centered_envmap[:, :, :-shift]), dim=2)
-
-
-# def _light_temperature_to_rgb(cct):
-#     xy = CCT_to_xy(cct)
-#     xyz = xy_to_XYZ(xy)
-#     rgb = XYZ_to_RGB(xyz, illuminant_XYZ=xy, illuminant_RGB=xy, XYZ_to_RGB_matrix=XYZ_to_RGB_matrix)
-#     return (255 * rgb).clip(0, 255)
 
 
 

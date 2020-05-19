@@ -443,15 +443,16 @@ class SwapNet(nn.Module):
             else array(disabled_skip_connections_ids)
         self.target_skip_connections_ids = array([]) if target_skip_connections_ids is None \
             else array(target_skip_connections_ids)
-        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
-        decoder_disabled_skip_connections_ids = self.get_decoder_disabled_skip_connection_ids(
-            disabled_skip_connections_ids
-        )
 
         # Network architecture
         self.encode = Encoder(n_double_conv, bottleneck_depth, disabled_skip_connections_ids)
         self.split = splitter
         self.assemble = assembler
+
+        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
+        decoder_disabled_skip_connections_ids = self.get_decoder_disabled_skip_connection_ids(
+            disabled_skip_connections_ids
+        )
         self.decode = Decoder(n_double_conv, bottleneck_depth, last_kernel_size, decoder_disabled_skip_connections_ids)
 
     def get_decoder_disabled_skip_connection_ids(self, disabled_skip_connections_ids):
@@ -562,7 +563,21 @@ class SwapNet512x1x1(SwapNet):
             image_light_latent.view(-1, 1, 4, 4), \
             target_light_latent.view(-1, 1, 4, 4), groundtruth_light_latent.view(-1, 1, 4, 4),\
             image_scene_latent, target_scene_latent, groundtruth_scene_latent
-        
+
+
+# =====================
+# IlluminationPredictor
+# =====================
+
+# class IlluminationPredicter(nn.Module):
+#     def __init__(self, in_size=64*16*16, out_reals=2):
+#         super(IlluminationPredicter, self).__init__()
+#         self.in_size = in_size
+#         self.fc = nn.Linear(in_size, out_reals)
+#
+#     def forward(self, x):
+#         x = x.view(-1, self.in_size)
+#         return self.fc(x)
 
 class GroundtruthEnvmapSwapNet(SwapNet):
     """
@@ -594,10 +609,7 @@ class GroundtruthEnvmapSwapNet(SwapNet):
         relit_image = self.decode(swapped_latent, skip_connections)
 
         return relit_image, predicted_image_envmap, predicted_target_envmap  
-    
-# =====================
-# IlluminationPredicter
-# =====================
+
 
 # class IlluminationPredicter(nn.Module):
 #     def __init__(self, in_size=64*16*16, out_reals=2):
@@ -620,7 +632,8 @@ class IlluminationPredicter(nn.Module):
             nn.Linear(20, 10),
             nn.PReLU(),
             nn.Linear(10, out_reals),
-        )    
+        )
+
     def forward(self, x):
         x = x.view(-1, self.in_size)
         return self.fc(x)

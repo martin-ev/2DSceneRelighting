@@ -1,6 +1,6 @@
 from torch import zeros, from_numpy, cat
 from math import sqrt, e
-from colour import CCT_to_xy, xy_to_XYZ, XYZ_to_RGB
+# from colour import CCT_to_xy, xy_to_XYZ, XYZ_to_RGB
 from numpy import array
 
 
@@ -17,11 +17,11 @@ ROTATIONS = {
 
 # conversion matrix from color-science example:
 # https://www.colour-science.org/api/0.3.6/html/colour.models.rgb.html?highlight=primary
-XYZ_to_RGB_matrix = array([
-    [3.24100326, -1.53739899, -0.49861587],
-    [-0.96922426, 1.87592999, 0.04155422],
-    [0.05563942, -0.20401120, 1.05714897]
-])
+# XYZ_to_RGB_matrix = array([
+#     [3.24100326, -1.53739899, -0.49861587],
+#     [-0.96922426, 1.87592999, 0.04155422],
+#     [0.05563942, -0.20401120, 1.05714897]
+# ])
 
 # Inverse of RGB to XYZ matrix from lecture notes
 # array([

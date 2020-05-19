@@ -41,7 +41,8 @@ def generate_envmap(light_direction, light_temp, height=16, width=32):
     @return: generated environment map with brightness gradient representing the light direction and color set 
     appropriately according to the light temperature
     """
-    light_rgb = _light_temperature_to_rgb(light_temp)
+    # TODO: render correct color
+    light_rgb = array([255., 255., 255.])
     centered_envmap = _envmap_with_centered_light(light_rgb, height, width)
     rotated_envmap = _rotate_envmap_to_match_direction(centered_envmap, light_direction)
     return rotated_envmap.view(3 * height * width, 1, 1)
@@ -68,11 +69,11 @@ def _rotate_envmap_to_match_direction(centered_envmap, light_direction):
     return cat((centered_envmap[:, :, -shift:], centered_envmap[:, :, :-shift]), dim=2)
 
 
-def _light_temperature_to_rgb(cct):
-    xy = CCT_to_xy(cct)
-    xyz = xy_to_XYZ(xy)
-    rgb = XYZ_to_RGB(xyz, illuminant_XYZ=xy, illuminant_RGB=xy, XYZ_to_RGB_matrix=XYZ_to_RGB_matrix)
-    return (255 * rgb).clip(0, 255)
+# def _light_temperature_to_rgb(cct):
+#     xy = CCT_to_xy(cct)
+#     xyz = xy_to_XYZ(xy)
+#     rgb = XYZ_to_RGB(xyz, illuminant_XYZ=xy, illuminant_RGB=xy, XYZ_to_RGB_matrix=XYZ_to_RGB_matrix)
+#     return (255 * rgb).clip(0, 255)
 
 
 

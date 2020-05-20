@@ -36,28 +36,24 @@ parser = argparse.ArgumentParser(description='Illumination Swap network with con
 parser.add_argument('-d', '--disabled-skip-connections',
                     dest='disabled_skip_connections',
                     nargs='*',
-                    action='append',
-                    default=[],
                     type=int,
                     help='Numbers of encoder layers that will not be propagated to the decoder as skip connections')
 parser.add_argument('-a', '--add-target-skip-connections',
                     dest='target_skip_connections',
                     nargs='*',
-                    action='append',
-                    type=int,
-                    default=[])
+                    type=int)
 ARGUMENTS = parser.parse_args()
 
 
 # Configure training objects
 model = GroundtruthEnvmapSwapNet(
-    disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections[0],
-    target_skip_connections_ids=ARGUMENTS.target_skip_connections[0]
+    disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections,
+    target_skip_connections_ids=ARGUMENTS.target_skip_connections
 ).to(device)
 optimizer = Adam(model.parameters())
 print('Model:', model.__class__.__name__)
-print('Disabled skip connections:', ARGUMENTS.disabled_skip_connections[0])
-print('Target skip connections:', ARGUMENTS.target_skip_connections[0])
+print('Disabled skip connections:', ARGUMENTS.disabled_skip_connections)
+print('Target skip connections:', ARGUMENTS.target_skip_connections)
 
 # Losses
 reconstruction_loss = nn.L1Loss()

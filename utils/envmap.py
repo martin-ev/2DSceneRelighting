@@ -17,11 +17,11 @@ ROTATIONS = {
 
 # Generated with colour-science, see others/EnvmapGeneration.ipynb
 COLOURS = {
-    2500: array([255, 202,  46]),
-    3500: array([255, 229,  96]),
-    4500: array([255, 244, 155]),
-    5500: array([255, 251, 209]),
-    6500: array([254, 255, 254])
+    2500: array([255, 222,  76]),
+    3500: array([255, 239, 125]),
+    4500: array([255, 251, 182]),
+    5500: array([238, 255, 234]),
+    6500: array([214, 255, 255])
 }
 
 

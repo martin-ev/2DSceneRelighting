@@ -13,7 +13,7 @@ from models.swapModels import GroundtruthEnvmapSwapNet
 from models.loss import log_l2_loss
 from utils.dataset import InputTargetGroundtruthWithGeneratedEnvmapDataset, DifferentScene, DifferentLightDirection, \
     VALIDATION_DATA_PATH
-from utils.storage import save_trained
+from utils.storage import save_trained, save_checkpoint
 from utils.device import setup_device
 from utils import tensorboard
 
@@ -93,6 +93,7 @@ writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
 TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 5
+CHECKPOINT_EVERY = 5  # save model checkpoint every n epochs
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 
 
@@ -175,6 +176,10 @@ for epoch in range(1, EPOCHS+1):
 
     # Clean up memory (see: https://repl.it/@nickangtc/python-del-multiple-variables-in-single-line)
     del x, x_envmap, target, target_envmap, groundtruth, relit, pred_image_envmap, pred_target_envmap
+
+    # Saving checkpoint
+    if epoch % CHECKPOINT_EVERY == 0:
+        save_checkpoint(model.state_dict(), optimizer.state_dict(), NAME + '_' + epoch)
 
     # Evaluate
     with no_grad():

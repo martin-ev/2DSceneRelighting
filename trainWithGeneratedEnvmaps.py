@@ -51,13 +51,13 @@ ARGUMENTS = parser.parse_args()
 
 # Configure training objects
 model = GroundtruthEnvmapSwapNet(
-    disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections,
-    target_skip_connections_ids=ARGUMENTS.target_skip_connections
+    disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections[0],
+    target_skip_connections_ids=ARGUMENTS.target_skip_connections[0]
 ).to(device)
 optimizer = Adam(model.parameters())
 print('Model:', model.__class__.__name__)
-print('Disabled skip connections:', ARGUMENTS.disabled_skip_connections)
-print('Target skip connections:', ARGUMENTS.target_skip_connections)
+print('Disabled skip connections:', ARGUMENTS.disabled_skip_connections[0])
+print('Target skip connections:', ARGUMENTS.target_skip_connections[0])
 
 # Losses
 reconstruction_loss = nn.L1Loss()

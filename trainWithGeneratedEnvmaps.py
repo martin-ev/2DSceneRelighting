@@ -26,10 +26,10 @@ device = setup_device(GPU_IDS)
 NAME = 'generated_envmaps_all_reconstruction_and_envmap_loss'
 BATCH_SIZE = 25
 NUM_WORKERS = 8
-EPOCHS = 30
+EPOCHS = 20
 SIZE = 256
-SAMPLED_TRAIN_SAMPLES = 100000
-SAMPLED_TEST_SAMPLES = 5000
+SAMPLED_TRAIN_SAMPLES = 300000
+SAMPLED_TEST_SAMPLES = 10000
 
 # Arguments
 parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
@@ -38,11 +38,13 @@ parser.add_argument('-d', '--disabled-skip-connections',
                     nargs='*',
                     action='append',
                     default=[],
+                    type=int,
                     help='Numbers of encoder layers that will not be propagated to the decoder as skip connections')
 parser.add_argument('-a', '--add-target-skip-connections',
                     dest='target_skip_connections',
                     nargs='*',
                     action='append',
+                    type=int,
                     default=[])
 ARGUMENTS = parser.parse_args()
 
@@ -91,8 +93,8 @@ print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 # Configure tensorboard
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
-SHOWN_SAMPLES = 3
-TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 5
+SHOWN_SAMPLES = 5
+TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 4
 CHECKPOINT_EVERY = 5  # save model checkpoint every n epochs
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 

@@ -12,7 +12,7 @@ def psnr(image_batch, groundtruth_batch):
     https://www.mathworks.com/matlabcentral/fileexchange/37691-psnr-for-rgb-images
     """
     mse = torch.mean((image_batch - groundtruth_batch) ** 2, dim=(1, 2, 3))
-    return (20 * torch.log10(255.0 / torch.sqrt(mse))).sum()
+    return (20 * torch.log10(255.0 / torch.sqrt(mse))).mean()
 
 
 # class SSIM:

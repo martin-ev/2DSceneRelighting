@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 from abc import ABC
-from numpy import array, setdiff1d
+from numpy import array
 
 
 EMPTY_TENSOR = torch.Tensor()
@@ -448,16 +448,13 @@ class SwapNet(nn.Module):
         self.encode = Encoder(n_double_conv, bottleneck_depth, disabled_skip_connections_ids)
         self.split = splitter
         self.assemble = assembler
-
-        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
-        decoder_disabled_skip_connections_ids = self.get_decoder_disabled_skip_connection_ids(
-            disabled_skip_connections_ids
-        )
-        self.decode = Decoder(n_double_conv, bottleneck_depth, last_kernel_size, decoder_disabled_skip_connections_ids)
+        self.decode = Decoder(n_double_conv, bottleneck_depth, last_kernel_size,
+                              self.get_decoder_disabled_skip_connection_ids(disabled_skip_connections_ids))
 
     def get_decoder_disabled_skip_connection_ids(self, disabled_skip_connections_ids):
+        # "Reflect" skip connection numbers as they are counted in reversed order wrt encoder
         n = self.encode.get_number_of_possible_skip_connections()
-        return (n - 1) - setdiff1d(disabled_skip_connections_ids, self.target_skip_connections_ids)
+        return (n - 1) - disabled_skip_connections_ids
 
     def forward(self, image, target, groundtruth):
         # pass image through encoder
@@ -623,7 +620,7 @@ class GroundtruthEnvmapSwapNet(SwapNet):
 
 
 class IlluminationPredicter(nn.Module):
-    def __init__(self, in_size = 64*16*16, out_reals = 2):
+    def __init__(self, in_size=64*16*16, out_reals=2):
         super(IlluminationPredicter, self).__init__()
         self.in_size = in_size
         self.fc = nn.Sequential(

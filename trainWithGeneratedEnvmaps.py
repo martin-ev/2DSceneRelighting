@@ -32,6 +32,7 @@ SAMPLED_TRAIN_SAMPLES = 300000
 SAMPLED_TEST_SAMPLES = 10000
 
 # Arguments
+# List arguments parsing: https://stackoverflow.com/a/15753721
 parser = argparse.ArgumentParser(description='Illumination Swap network with configurable skip connections')
 parser.add_argument('-d', '--disabled-skip-connections',
                     dest='disabled_skip_connections',
@@ -41,7 +42,11 @@ parser.add_argument('-d', '--disabled-skip-connections',
 parser.add_argument('-a', '--add-target-skip-connections',
                     dest='target_skip_connections',
                     nargs='*',
-                    type=int)
+                    type=int,
+                    help='Numbers of encoder layers from target image pass that will replace original skip '
+                         'connections in the decoder. Is overridden by --disabled-skip-connection, i.e. if skip '
+                         'connection from particular layer is disabled also target skip connection from this layer '
+                         'will not be used')
 ARGUMENTS = parser.parse_args()
 
 
@@ -89,7 +94,7 @@ print(f'Running with batch size: {BATCH_SIZE} for {EPOCHS} epochs.')
 # Configure tensorboard
 writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
-SHOWN_SAMPLES = 5
+SHOWN_SAMPLES = 3
 TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 4
 CHECKPOINT_EVERY = 5  # save model checkpoint every n epochs
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')

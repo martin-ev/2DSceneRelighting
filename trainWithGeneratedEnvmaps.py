@@ -23,7 +23,7 @@ GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'generated_envmaps_all_reconstruction_and_envmap_loss'
+NAME = 'generated_envmaps_use_deep_target_skiplinks'
 BATCH_SIZE = 25
 NUM_WORKERS = 8
 EPOCHS = 20
@@ -182,7 +182,7 @@ for epoch in range(1, EPOCHS+1):
 
     # Saving checkpoint
     if epoch % CHECKPOINT_EVERY == 0:
-        save_checkpoint(model.state_dict(), optimizer.state_dict(), NAME + '_' + epoch)
+        save_checkpoint(model.state_dict(), optimizer.state_dict(), NAME + '_' + str(epoch))
 
     # Evaluate
     with no_grad():

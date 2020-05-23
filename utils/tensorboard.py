@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 DAILY_RUN_FOLDER = datetime.now().strftime('%Y-%m-%d')
 TENSORBOARD_LOG_DIR = f'/ivrldata1/students/team6/runs/{DAILY_RUN_FOLDER}'  # specify where logs should be stored
-TENSORBOARD_PORT = 6987  # tensorboard will run on localhost on this port
+TENSORBOARD_PORT = 6988  # tensorboard will run on localhost on this port
 
 
 def generate_run_name(label=None):

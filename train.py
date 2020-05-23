@@ -6,7 +6,7 @@ from torchvision.utils import make_grid
 from utils.storage import save_trained, load_trained
 from utils.device import setup_device
 from utils.losses import ReconstructionLoss, SceneLatentLoss, LightLatentLoss, GANLoss, FoolGANLoss, ColorPredictionLoss, DirectionPredictionLoss
-from pytorch_ssim import SSIM
+from kornia.losses import SSIM
 from lpips_pytorch import LPIPS
 import utils.tensorboard as tensorboard
 from utils.dataset import InputTargetGroundtruthDataset, TRAIN_DATA_PATH, VALIDATION_DATA_PATH, SameScene, SameLightDirection, SameLightColor

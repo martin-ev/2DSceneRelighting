@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from math import pi
 
 def log_l2_loss(x, target):
     # there is an issue with torch.norm (https://github.com/pytorch/pytorch/issues/30704) that's why it's done this way
@@ -52,8 +53,8 @@ class ColorPredictionLoss(_SimpleLoss):
         super().__init__(p=p, factor=factor)
         
 class DirectionPredictionLoss(_SimpleLoss):    
-    def __init__(self, p=2):
-        factor = _FACTORS[p](1/90)
+    def __init__(self, p="cos"):
+        factor = _FACTORS[p](1.)
         super().__init__(p=p, factor=factor)
         
 class SceneLatentLoss(_SimpleLoss):    

@@ -15,6 +15,8 @@ from utils.metrics import psnr
 from models.swapModels import IlluminationSwapNet, AnOtherSwapNet, SwapNet512x1x1, GroundtruthEnvmapSwapNet, IlluminationPredicter
 from models.patchGan import NLayerDiscriminator
 import pickle
+from utils.storage import save_trained, save_checkpoint
+import time
 
 def write_images(writer, header, step, inputs, input_light_latents, targets, target_light_latents, groundtruthes, groundtruth_light_latents, relits):
     writer.add_image(f'Visualization-{header}/1-Input', make_grid(inputs), step)
@@ -293,10 +295,21 @@ def main(config):
     train_batches_counter = 0 
     print(f'Running for {config["train_duration"]} batches.')
     
+    
+    last_save_t = 0
     # Train loop
-    while train_batches_counter < config['train_duration'] : 
-        #with torch.autograd.detect_anomaly():
+    while train_batches_counter < config['train_duration'] :         
+        # Store trained model
+        t = time.time()
+        if t-last_save_t > config["checkpoint_period"]:
+            last_save_t = t
+            save_trained(generator, "generator"+config['name']+str(t))
+            if config["use_illumination_predicter"]:
+                save_trained(illumination_predicter, "illumination_predicter"+config['name']+str(t))
+            if config["use_discriminator"]:
+                save_trained(discriminator, "discriminator"+config['name']+str(t))
 
+        #with torch.autograd.detect_anomaly():
         # Load batch
         if config["debug"]: print('Load batch', get_gpu_memory_map())
         with torch.no_grad():

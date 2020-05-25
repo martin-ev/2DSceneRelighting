@@ -8,7 +8,7 @@ from torchvision.utils import make_grid
 
 from utils.metrics import psnr
 from models.illumination_swap import IlluminationSwapNet
-from models.loss import log_l2_loss
+from utils.losses import log_l2_loss
 from tqdm import tqdm
 from utils.dataset import InputTargetGroundtruthDataset, DifferentScene, DifferentLightDirection, VALIDATION_DATA_PATH
 from utils.storage import save_trained

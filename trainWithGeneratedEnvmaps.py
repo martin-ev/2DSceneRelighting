@@ -9,7 +9,7 @@ from torchvision.transforms import Resize
 from torchvision.utils import make_grid
 
 from utils.metrics import psnr
-from models.swapModels import GroundtruthEnvmapSwapNet
+from models.swapModels import SinglePortraitEnvmapSwapNet, SceneEnvmapNetSplitter, SceneEnvmapNetAssembler
 from models.loss import log_l2_loss
 from utils.dataset import InputTargetGroundtruthWithGeneratedEnvmapDataset, DifferentScene, DifferentLightDirection, \
     VALIDATION_DATA_PATH
@@ -23,9 +23,9 @@ GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'generated_envmaps_use_deep_target_skiplinks'
+NAME = 'generated_envmaps_scene_light_split'
 BATCH_SIZE = 25
-NUM_WORKERS = 8
+NUM_WORKERS = 6
 EPOCHS = 20
 SIZE = 256
 SAMPLED_TRAIN_SAMPLES = 300000
@@ -51,7 +51,9 @@ ARGUMENTS = parser.parse_args()
 
 
 # Configure training objects
-model = GroundtruthEnvmapSwapNet(
+model = SinglePortraitEnvmapSwapNet(
+    splitter=SceneEnvmapNetSplitter(),
+    assembler=SceneEnvmapNetAssembler(),
     disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections,
     target_skip_connections_ids=ARGUMENTS.target_skip_connections
 ).to(device)
@@ -96,7 +98,7 @@ writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
 TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 4
-CHECKPOINT_EVERY = 5  # save model checkpoint every n epochs
+CHECKPOINT_EVERY = 2  # save model checkpoint every n epochs
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 
 

@@ -2,9 +2,6 @@ from torch import device, cuda
 import os
 
 
-DEFAULT_GPU = 2
-
-
 def setup_device(gpu_ids):
     """
     Creates a torch.device
@@ -17,13 +14,10 @@ def setup_device(gpu_ids):
     if used_gpus > 1:
         print('Cannot use more than one device.')
         return None
-    if cuda.is_available():
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids_string
-        dev = device(f'cuda:{gpu_ids_string}')
-        print(f'Cuda available, using GPU {gpu_ids_string}')
-    else:
-        dev = device('cpu')
-        print('Cuda NOT available, using CPU!')
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids_string
+    dev = device(f'cuda:{gpu_ids_string}')
+    print(f'Using GPU {gpu_ids_string}')
     print(f'Created device: {dev}')
     return dev
 

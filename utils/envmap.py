@@ -1,6 +1,7 @@
-from torch import zeros, from_numpy, cat
+from torch import zeros, tensor, cat
 from math import sqrt, e
 from numpy import array
+from kornia.color import hsv_to_rgb
 
 
 ROTATIONS = {
@@ -15,33 +16,34 @@ ROTATIONS = {
 }
 
 
-# Generated with colour-science, see others/EnvmapGeneration.ipynb
-COLOURS = {
-    2500: array([255, 222,  76]),
-    3500: array([255, 239, 125]),
-    4500: array([255, 251, 182]),
-    5500: array([238, 255, 234]),
-    6500: array([214, 255, 255])
+# Generated with colour-science and colorsys, see others/EnvmapGeneration.ipynb
+COLORS_HSV = {
+    2500: array([14, 231, 255]),
+    3500: array([19, 192, 255]),
+    4500: array([22, 132, 255]),
+    5500: array([24, 65, 255]),
+    6500: array([54, 0, 255])
 }
 
 
-def generate_envmap(light_direction, light_temp, height=16, width=32):
+def generate_envmap(light_direction, light_temp, mode='hsv', height=16, width=32):
     """
     Generates environment map representing the scene with given light properties
     @param light_direction: direction from which the light is coming in the scene
-    @param light_temp: (not used; always generates white light) light temperature that corresponds to its color
+    @param light_temp: light temperature that corresponds to its color
+    @param mode: colorspace in which the envmap should be generated (RGB or HSV).
     @param height: height of the generated environment map
     @param width: width of the generated environment map
     @return: generated environment map with brightness gradient representing the light direction and color set 
     appropriately according to the light temperature
     """
-    light_rgb = COLOURS[light_temp]
-    centered_envmap = _envmap_with_centered_light(light_rgb, height, width)
+    light_hsv = COLORS_HSV[light_temp]
+    centered_envmap = _envmap_with_centered_light(light_hsv, mode, height, width)
     rotated_envmap = _rotate_envmap_to_match_direction(centered_envmap, light_direction)
     return rotated_envmap.view(3 * height * width, 1, 1)
 
 
-def _envmap_with_centered_light(color, height, width):
+def _envmap_with_centered_light(color, mode, height, width):
     envmap = zeros((3, height, width))
     x_center, y_center = float(width) / 2, float(height) / 2
     sigma = float(min(height, width)) / 10
@@ -50,8 +52,12 @@ def _envmap_with_centered_light(color, height, width):
         for y in range(height):
             distance = sqrt((y - y_center) ** 2 + (x - x_center) ** 2)
             fraction = e**(- distance/sigma2)
-            envmap[:, y, x] = from_numpy(fraction * color)
-    return envmap
+            envmap[:, y, x] = tensor([color[0], color[1], int(fraction * color[2])])
+
+    if mode == 'hsv':
+        return envmap
+    elif mode == 'rgb':
+        return hsv_to_rgb(envmap / 255.) * 255.
 
 
 def _rotate_envmap_to_match_direction(centered_envmap, light_direction):
@@ -60,6 +66,3 @@ def _rotate_envmap_to_match_direction(centered_envmap, light_direction):
     max_shift = width // 2
     shift = int(max_shift * rotation)
     return cat((centered_envmap[:, :, -shift:], centered_envmap[:, :, :-shift]), dim=2)
-
-
-

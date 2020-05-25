@@ -7,10 +7,13 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision.transforms import Resize
 from torchvision.utils import make_grid
+from lpips_pytorch import LPIPS
 
 from utils.metrics import psnr
-from models.swapModels import GroundtruthEnvmapSwapNet
-from models.loss import log_l2_loss
+from models.swapModels import SinglePortraitEnvmapSwapNet, \
+    SinglePortraitEnvmapNetSplitter, SinglePortraitEnvmapNetAssembler, \
+    SceneEnvmapNetSplitter, SceneEnvmapNetAssembler
+from utils.losses import log_l2_loss
 from utils.dataset import InputTargetGroundtruthWithGeneratedEnvmapDataset, DifferentScene, DifferentLightDirection, \
     VALIDATION_DATA_PATH
 from utils.storage import save_trained, save_checkpoint
@@ -23,9 +26,9 @@ GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
-NAME = 'generated_envmaps_use_deep_target_skiplinks'
+NAME = 'generated_envmaps_scene_light_split'
 BATCH_SIZE = 25
-NUM_WORKERS = 8
+NUM_WORKERS = 6
 EPOCHS = 20
 SIZE = 256
 SAMPLED_TRAIN_SAMPLES = 300000
@@ -46,12 +49,36 @@ parser.add_argument('-a', '--add-target-skip-connections',
                     help='Numbers of encoder layers from target image pass that will replace original skip '
                          'connections in the decoder. Is overridden by --disabled-skip-connection, i.e. if skip '
                          'connection from particular layer is disabled also target skip connection from this layer '
-                         'will not be used')
+                         'will not be used.')
+parser.add_argument('--latent',
+                    dest='latent',
+                    choices=['light', 'scene-light'],
+                    required=True,
+                    help='Specifies what information should be encoded in the latent representation. "light" - latent '
+                         'represents only predicted envmap of the input image. "scene_light" - latent encodes both '
+                         'the predicted envmap of the input image and scene (content) information.')
+parser.add_argument('--loss',
+                    dest='loss',
+                    choices=['l1', 'lpips'],
+                    required=True,
+                    help='Loss to be used as reconstruction loss. Can be either MAE loss ("l1") or LPIPS ("lpips").')
 ARGUMENTS = parser.parse_args()
 
 
 # Configure training objects
-model = GroundtruthEnvmapSwapNet(
+splitter, assembler, envmap_colorspace = None, None, None
+if ARGUMENTS.latent == 'light':
+    splitter = SinglePortraitEnvmapNetSplitter()
+    assembler = SinglePortraitEnvmapNetAssembler()
+    envmap_colorspace = 'rgb'
+elif ARGUMENTS.latent == 'scene-light':
+    splitter = SceneEnvmapNetSplitter()
+    assembler = SceneEnvmapNetAssembler()
+    envmap_colorspace = 'hsv'
+
+model = SinglePortraitEnvmapSwapNet(
+    splitter=splitter,
+    assembler=assembler,
     disabled_skip_connections_ids=ARGUMENTS.disabled_skip_connections,
     target_skip_connections_ids=ARGUMENTS.target_skip_connections
 ).to(device)
@@ -61,17 +88,29 @@ print('Disabled skip connections:', ARGUMENTS.disabled_skip_connections)
 print('Target skip connections:', ARGUMENTS.target_skip_connections)
 
 # Losses
-reconstruction_loss = nn.L1Loss()
-envmap_loss = log_l2_loss
+reconstruction_loss = None
+if ARGUMENTS.loss == 'l1':
+    reconstruction_loss = nn.L1Loss().to(device)
+elif ARGUMENTS.loss == 'lpips':
+    reconstruction_loss = LPIPS().to(device)
+
+envmap_loss = None
+if envmap_colorspace == 'rgb':
+    envmap_loss = log_l2_loss
+else:
+    # TODO: Implement proper loss for 2 (H,S) + 512 (V) latent
+    raise NotImplementedError
 
 # Configure data sets
 transform = Resize(SIZE)
 pairing_strategies = [DifferentScene(), DifferentLightDirection()]
 train_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(transform=transform,
-                                                                 pairing_strategies=pairing_strategies)
+                                                                 pairing_strategies=pairing_strategies,
+                                                                 mode=envmap_colorspace)
 test_dataset = InputTargetGroundtruthWithGeneratedEnvmapDataset(data_path=VALIDATION_DATA_PATH,
                                                                 transform=transform,
-                                                                pairing_strategies=pairing_strategies)
+                                                                pairing_strategies=pairing_strategies,
+                                                                mode=envmap_colorspace)
 
 # Configure data loaders
 # Sub-sampling:
@@ -96,14 +135,15 @@ writer = tensorboard.setup_summary_writer(NAME)
 tensorboard_process = tensorboard.start_tensorboard_process()
 SHOWN_SAMPLES = 3
 TRAIN_VISUALIZATION_FREQ = TRAIN_SAMPLES // BATCH_SIZE // 4
-CHECKPOINT_EVERY = 5  # save model checkpoint every n epochs
+CHECKPOINT_EVERY = 2  # save model checkpoint every n epochs
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 
 
 def normalize_image(latent):
     # See: https://discuss.pytorch.org/t/current-torch-min-does-not-support-multiple-dimensions/55577/2
     x = latent.view(-1, 1536)
-    x_min, x_max = x.min(dim=1)[0].unsqueeze(1).expand(-1, 1536), x.max(dim=1)[0].unsqueeze(1).expand(-1, 1536)
+    x_min = x.min(dim=1)[0].unsqueeze(1).expand(-1, 1536)
+    x_max = x.max(dim=1)[0].unsqueeze(1).expand(-1, 1536)
     return ((x - x_min) / (x_max - x_min)).view(-1, 3, 16, 32)
 
 
@@ -214,8 +254,8 @@ for epoch in range(1, EPOCHS+1):
                           epoch, 'Test')
 
         # Clean up memory
-        del test_x, test_x_envmap, test_target, test_target_envmap, test_groundtruth, test_relit, test_pred_image_envmap,\
-            test_pred_target_envmap
+        del test_x, test_x_envmap, test_target, test_target_envmap, test_groundtruth, test_relit, \
+            test_pred_image_envmap, test_pred_target_envmap
 
         # Report test metrics
         report_loss({
@@ -223,7 +263,7 @@ for epoch in range(1, EPOCHS+1):
             '2-Image-env-map': test_loss_image_envmap / TEST_BATCHES,
             '3-Target-env-map': test_loss_target_envmap / TEST_BATCHES
         }, epoch, 'Test')
-        report_metrics(test_psnr / TEST_SAMPLES, epoch, 'Test')
+        report_metrics(test_psnr / TEST_BATCHES, epoch, 'Test')
 
 # Store trained model
 save_trained(model, NAME)

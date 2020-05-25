@@ -144,68 +144,96 @@ class Encoder(SkipConnectionProvider):
 # ===========================
 
 class WeightedPooling(nn.Module):
-    def __init__(self, in_channels=512, envmap_h=16, envmap_w=32):
-        expected_channels = envmap_h * envmap_w
-        assert in_channels == expected_channels, \
-            f'WeightedPooling input has {in_channels} channels, expected {expected_channels}'
-        
+    def __init__(self, weights_channels=512):
         super(WeightedPooling, self).__init__()
-        
-        # final conv before weighted average
-        out_channels = 4 * in_channels
-        self.conv = nn.Sequential(
+        self.weights_channels = weights_channels
+
+    def forward(self, x):
+        # split x into prediction and confidence
+        prediction, confidence = x[:, :-self.weights_channels], x[:, -self.weights_channels:]
+        repeat = prediction.size()[1] // confidence.size()[1]
+        return (prediction * confidence.repeat((1, repeat, 1, 1))).sum(dim=(2, 3), keepdim=True)
+
+
+class Tiling(nn.Module):
+    def __init__(self, size=16):
+        super(Tiling, self).__init__()
+        self.size = size
+
+    def forward(self, x):
+        return x.repeat((1, 1, self.size, self.size))
+
+
+class SinglePortraitEnvmapNetSplitter(nn.Module):
+    def __init__(self, in_channels=512, envmap_h=16, envmap_w=32):
+        super(SinglePortraitEnvmapNetSplitter, self).__init__()
+        envmap_size = envmap_h * envmap_w
+        out_channels = 4 * envmap_size  # R, G, B + confidence
+        self.pre_conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.Softplus()
         )
+        self.weighted_pool = WeightedPooling(weights_channels=envmap_size)
 
-    def forward(self, x):
-        x = self.conv(x)
-        
-        # split x into environment map predictions and confidence
-        channels = x.size()[1]
-        split_point = 3 * (channels // 4)
-        envmap_predictions, confidence = x[:, :split_point], x[:, split_point:]
-        
-        # TODO: multiplication with sum can probably be implemented as convolution with groups (according to some posts)
-        return (envmap_predictions * confidence.repeat((1, 3, 1, 1))).sum(dim=(2, 3), keepdim=True)
+    def forward(self, latent):
+        latent = self.pre_conv(latent)
+        scene_latent = None
+        light_latent = self.weighted_pool(latent)
+        return scene_latent, light_latent
 
 
-class Tiling(nn.Module):
-    def __init__(self, size=16, in_channels=1536, out_channels=512):
-        super(Tiling, self).__init__()
-        self.size = size
-        self.encode = nn.Sequential(
+class SinglePortraitEnvmapNetAssembler(nn.Module):
+    def __init__(self, in_channels=1536, out_channels=512):
+        super(SinglePortraitEnvmapNetAssembler, self).__init__()
+        self.tile = Tiling()
+        self.out_conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.PReLU()
         )
 
-    def forward(self, x):
-        tiled = x.repeat((1, 1, self.size, self.size))
-        return self.encode(tiled)
+    def forward(self, scene_latent, light_latent):        
+        latent = self.tile(light_latent)
+        return self.out_conv(latent)
 
 
-class IlluminationSwapNetSplitter(nn.Module):
-    def __init__(self):
-        super(IlluminationSwapNetSplitter, self).__init__()        
-        self.weighted_pool = WeightedPooling()
+class SceneEnvmapNetSplitter(nn.Module):
+    def __init__(self, in_channels=512, scene_latent_channels=512, envmap_h=16, envmap_w=32):
+        super(SceneEnvmapNetSplitter, self).__init__()
+        envmap_size = envmap_h * envmap_w
+        self.scene_latent_channels = scene_latent_channels
+        self.light_latent_channels = 2 * (envmap_size + 2)  # 2 additional channels for S and V (HSV envmap prediction)
+        out_channels = scene_latent_channels + self.light_latent_channels
+        self.pre_conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.Softplus()
+        )
+        self.weighted_pool = WeightedPooling(weights_channels=self.light_latent_channels // 2)
 
-    def forward(self, latent):        
-        pred_env_map = self.weighted_pool(latent)
-        scene_latent = None
-        light_latent = pred_env_map
+    def forward(self, latent):
+        latent = self.pre_conv(latent)
+        scene_latent, light_latent = latent.split([self.scene_latent_channels, self.light_latent_channels])
+        light_latent = self.weighted_pool(light_latent)
         return scene_latent, light_latent
 
 
-class IlluminationSwapNetAssembler(nn.Module):
-    def __init__(self):
-        super(IlluminationSwapNetAssembler, self).__init__()
+class SceneEnvmapNetAssembler(nn.Module):
+    def __init__(self, out_channels=512, scene_latent_channels=512, envmap_h=16, envmap_w=32):
+        super(SceneEnvmapNetAssembler, self).__init__()
         self.tile = Tiling()
+        in_channels = scene_latent_channels + envmap_h * envmap_w + 2
+        self.out_conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, 3, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.PReLU()
+        )
 
-    def forward(self, scene_latent, light_latent):        
-        latent = self.tile(light_latent)
-        return latent
+    def forward(self, scene_latent, light_latent):
+        light_latent = self.tile(light_latent)
+        latent = torch.cat((scene_latent, light_latent), dim=1)
+        return self.out_conv(latent)
 
 
 # ======================
@@ -512,8 +540,8 @@ class IlluminationSwapNet(SwapNet):
         representations are swapped so that the decoder, using U-Net-like skip connections from the encoder,
         generates image with the original content but under the lighting conditions of the second input.
         """
-        super(IlluminationSwapNet, self).__init__(splitter=IlluminationSwapNetSplitter(),
-                                                  assembler=IlluminationSwapNetAssembler(),
+        super(IlluminationSwapNet, self).__init__(splitter=SinglePortraitEnvmapNetSplitter(),
+                                                  assembler=SinglePortraitEnvmapNetAssembler(),
                                                   last_kernel_size=last_kernel_size,
                                                   disabled_skip_connections_ids=disabled_skip_connections_ids,
                                                   target_skip_connections_ids=target_skip_connections_ids)
@@ -562,61 +590,36 @@ class SwapNet512x1x1(SwapNet):
             image_scene_latent, target_scene_latent, groundtruth_scene_latent
 
 
-# =====================
-# IlluminationPredictor
-# =====================
-
-# class IlluminationPredicter(nn.Module):
-#     def __init__(self, in_size=64*16*16, out_reals=2):
-#         super(IlluminationPredicter, self).__init__()
-#         self.in_size = in_size
-#         self.fc = nn.Linear(in_size, out_reals)
-#
-#     def forward(self, x):
-#         x = x.view(-1, self.in_size)
-#         return self.fc(x)
-
-class GroundtruthEnvmapSwapNet(SwapNet):
+class SinglePortraitEnvmapSwapNet(SwapNet):
     """
     Illumination swap network model based on "Single Image Portrait Relighting" (Sun et al., 2019) using additional
     generated ground-truth environment maps.
     Autoencoder accepts two images as inputs - one to be relit and one representing target lighting conditions.
     It learns to encode their environment maps in the latent representation. In the bottleneck the latent
     representations are swapped so that the decoder, using U-Net-like skip connections from the encoder,
-    generates image with the original content but under the lighting conditions of the second input.
+    aims to generate image with the original content but under the lighting conditions of the second input.
     """
-    def __init__(self, disabled_skip_connections_ids=None, target_skip_connections_ids=None):
-        super(GroundtruthEnvmapSwapNet, self).__init__(splitter=IlluminationSwapNetSplitter(),
-                                                       assembler=IlluminationSwapNetAssembler(),
-                                                       disabled_skip_connections_ids=disabled_skip_connections_ids,
-                                                       target_skip_connections_ids=target_skip_connections_ids)
+    def __init__(self, splitter, assembler, disabled_skip_connections_ids=None, target_skip_connections_ids=None):
+        super(SinglePortraitEnvmapSwapNet, self).__init__(splitter=splitter,
+                                                          assembler=assembler,
+                                                          disabled_skip_connections_ids=disabled_skip_connections_ids,
+                                                          target_skip_connections_ids=target_skip_connections_ids)
 
     def forward(self, image, target, groundtruth):
         # pass image & target through encoder
         image_latent = self.encode(image)
         image_skip_connections = self.encode.get_skip_connections()
-        _, predicted_image_envmap = self.split(image_latent)
+        predicted_image_scene_latent, predicted_image_light_latent = self.split(image_latent)
         target_latent = self.encode(target)
         target_skip_connections = self.encode.get_skip_connections()
-        _, predicted_target_envmap = self.split(target_latent)
+        predicted_target_light_latent, predicted_target_light_latent = self.split(target_latent)
 
         # decode from target envmap ground-truth using merged skip connections
-        swapped_latent = self.assemble(None, predicted_target_envmap)
+        swapped_latent = self.assemble(predicted_image_scene_latent, predicted_target_light_latent)
         skip_connections = self.merge_skip_connections(image_skip_connections, target_skip_connections)
         relit_image = self.decode(swapped_latent, skip_connections)
 
-        return relit_image, predicted_image_envmap, predicted_target_envmap  
-
-
-# class IlluminationPredicter(nn.Module):
-#     def __init__(self, in_size=64*16*16, out_reals=2):
-#         super(IlluminationPredicter, self).__init__()
-#         self.in_size = in_size
-#         self.fc = nn.Linear(in_size, out_reals)
-#
-#     def forward(self, x):
-#         x = x.view(-1, self.in_size)
-#         return self.fc(x)
+        return relit_image, predicted_image_light_latent, predicted_target_light_latent
 
 
 class IlluminationPredicter(nn.Module):

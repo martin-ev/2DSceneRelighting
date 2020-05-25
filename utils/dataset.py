@@ -292,8 +292,8 @@ class InputTargetGroundtruthDataset(ImageDataset):
 
     def __getitem__(self, idx):
         (x, target), ground_truth = self.items[idx]
-        return (Image(x, self.transform).as_dict(), Image(target, self.transform).as_dict()), \
-               Image(ground_truth, self.transform).as_dict()
+        return (Image(x, self.transform).as_dict(), Image(target, self.transform).as_dict()),\
+            Image(ground_truth, self.transform).as_dict()
 
     def __len__(self):
         return len(self.items)
@@ -307,20 +307,20 @@ class InputTargetGroundtruthWithGeneratedEnvmapDataset(InputTargetGroundtruthDat
     """
     def __init__(self, locations=None, scenes=None, input_directions=None, input_colors=None,
                  target_directions=None, target_colors=None, data_path=TRAIN_DATA_PATH, transform=None,
-                 pairing_strategies=None, envmap_h=16, envmap_w=32):
+                 pairing_strategies=None, mode='rgb', envmap_h=16, envmap_w=32):
         super(InputTargetGroundtruthWithGeneratedEnvmapDataset, self).__init__(
             locations, scenes, input_directions, input_colors, target_directions, target_colors, data_path, transform,
             pairing_strategies)
 
         # Generate ground-truth envmaps
-        self.ground_truth_envmaps = self._generate_ground_truth_envmaps(envmap_h, envmap_w)
+        self.ground_truth_envmaps = self._generate_ground_truth_envmaps(mode, envmap_h, envmap_w)
 
     @staticmethod
-    def _generate_ground_truth_envmaps(envmap_h, envmap_w):
+    def _generate_ground_truth_envmaps(mode, envmap_h, envmap_w):
         envmaps = {}
         for direction in ALL_DIRECTIONS:
             for color in ALL_COLORS:
-                envmaps[(direction, int(color))] = generate_envmap(direction, int(color), envmap_h, envmap_w)
+                envmaps[(direction, int(color))] = generate_envmap(direction, int(color), mode, envmap_h, envmap_w)
         return envmaps
 
     def __getitem__(self, idx):
@@ -345,7 +345,7 @@ class OneInputTargetGroundtruthDataset(InputTargetGroundtruthDataset):
     def __getitem__(self, idx):
         (x, target), ground_truth = self.items[0]
         return (Image(x, self.transform).as_dict(), Image(target, self.transform).as_dict()), \
-               Image(ground_truth, self.transform).as_dict()
+            Image(ground_truth, self.transform).as_dict()
 
     def __len__(self):
         return 1

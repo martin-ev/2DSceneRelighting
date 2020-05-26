@@ -8,6 +8,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision.transforms import Resize
 from torchvision.utils import make_grid
 from lpips_pytorch import LPIPS
+from kornia.color import hsv_to_rgb
 
 from utils.metrics import psnr
 from models.swapModels import SinglePortraitEnvmapSwapNet, \
@@ -138,12 +139,18 @@ CHECKPOINT_EVERY = 2  # save model checkpoint every n epochs
 print(f'{SHOWN_SAMPLES} train samples will be visualized every {TRAIN_VISUALIZATION_FREQ} train batches.')
 
 
-def normalize_image(latent):
+def normalize_image(light_latent):
     # See: https://discuss.pytorch.org/t/current-torch-min-does-not-support-multiple-dimensions/55577/2
-    x = latent.view(-1, 1536)
-    x_min = x.min(dim=1)[0].unsqueeze(1).expand(-1, 1536)
-    x_max = x.max(dim=1)[0].unsqueeze(1).expand(-1, 1536)
-    return ((x - x_min) / (x_max - x_min)).view(-1, 3, 16, 32)
+    if ARGUMENTS.latent == 'scene-light':
+        envmap_hs, envmap_v = light_latent.split([2, 512], dim=1)
+        envmap_hsv = cat((envmap_hs.repeat_interleave(512), envmap_v), dim=1).view(-1, 3, 16, 32)
+        return hsv_to_rgb(envmap_hsv)
+    elif ARGUMENTS.latent == 'light':
+        # TODO: it should not be normalized across channels
+        envmap = light_latent.view(-1, 1536)
+        envmap_min = envmap.min(dim=1)[0].unsqueeze(1).expand(-1, 1536)
+        envmap_max = envmap.max(dim=1)[0].unsqueeze(1).expand(-1, 1536)
+        return ((envmap - envmap_min) / (envmap_max - envmap_min)).view(-1, 3, 16, 32)
 
 
 def visualize(in_img, out_img, gt_img, target_img,

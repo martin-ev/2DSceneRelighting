@@ -13,7 +13,7 @@ from utils.metrics import psnr
 from models.swapModels import SinglePortraitEnvmapSwapNet, \
     SinglePortraitEnvmapNetSplitter, SinglePortraitEnvmapNetAssembler, \
     SceneEnvmapNetSplitter, SceneEnvmapNetAssembler
-from utils.losses import log_l2_loss
+from utils.losses import log_l2_loss, hsv_envmap_loss
 from utils.dataset import InputTargetGroundtruthWithGeneratedEnvmapDataset, DifferentScene, DifferentLightDirection, \
     VALIDATION_DATA_PATH
 from utils.storage import save_trained, save_checkpoint
@@ -98,8 +98,7 @@ envmap_loss = None
 if envmap_colorspace == 'rgb':
     envmap_loss = log_l2_loss
 else:
-    # TODO: Implement proper loss for 2 (H,S) + 512 (V) latent
-    raise NotImplementedError
+    envmap_loss = hsv_envmap_loss
 
 # Configure data sets
 transform = Resize(SIZE)

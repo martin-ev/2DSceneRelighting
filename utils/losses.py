@@ -77,8 +77,8 @@ class ColorPredictionLoss(_SimpleLoss):
 
 
 class DirectionPredictionLoss(_SimpleLoss):    
-    def __init__(self, p=2):
-        factor = _FACTORS[p](1/90)
+    def __init__(self, p="cos"):
+        factor = _FACTORS[p](1.)
         super().__init__(p=p, factor=factor)
 
 

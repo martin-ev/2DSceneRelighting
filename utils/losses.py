@@ -1,13 +1,26 @@
 import torch
 import torch.nn as nn
 from math import pi
+from kornia.color import hsv_to_rgb
 
 
 def log_l2_loss(x, target):
     # there is an issue with torch.norm (https://github.com/pytorch/pytorch/issues/30704) that's why it's done this way
     b, c, h, w = x.size()
-    n = float(b*c*h*w)  # total number of elements
+    n = float(b * c * h * w)  # total number of elements
     return (torch.log1p(x) - torch.log1p(target)).pow(2).sum() / n
+
+
+def _expand_hsv(tensor, v_channels):
+    tensor_hs, tensor_v = tensor.split([2, v_channels], dim=1)
+    return torch.cat((tensor_hs.repeat_interleave(v_channels, dim=1), tensor_v), dim=1)
+
+
+def hsv_envmap_loss(x, target):
+    v_channels = x.size()[1] - 2
+    x_hsv = _expand_hsv(x, v_channels)
+    target_hsv = _expand_hsv(target, v_channels)
+    return log_l2_loss(hsv_to_rgb(x_hsv), hsv_to_rgb(target_hsv))
 
 
 def cos_loss(a1, a2):

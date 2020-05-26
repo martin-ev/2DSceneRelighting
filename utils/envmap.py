@@ -38,12 +38,16 @@ def generate_envmap(light_direction, light_temp, mode='hsv', height=16, width=32
     appropriately according to the light temperature
     """
     light_hsv = COLORS_HSV[light_temp]
-    centered_envmap = _envmap_with_centered_light(light_hsv, mode, height, width)
+    centered_envmap = _envmap_with_centered_light(light_hsv, height, width)
     rotated_envmap = _rotate_envmap_to_match_direction(centered_envmap, light_direction)
-    return rotated_envmap.view(3 * height * width, 1, 1)
+    if mode == 'rgb':
+        return (255. * hsv_to_rgb(rotated_envmap / 255.)).view(3 * height * width, 1, 1)
+    elif mode == 'hsv':
+        hue, saturation = rotated_envmap[0, 0, 0], rotated_envmap[1, 0, 0]
+        return cat((hue, saturation, rotated_envmap[2, :, :].view(height * width, 1, 1)), dim=1)
 
 
-def _envmap_with_centered_light(color, mode, height, width):
+def _envmap_with_centered_light(color, height, width):
     envmap = zeros((3, height, width))
     x_center, y_center = float(width) / 2, float(height) / 2
     sigma = float(min(height, width)) / 10
@@ -54,10 +58,7 @@ def _envmap_with_centered_light(color, mode, height, width):
             fraction = e**(- distance/sigma2)
             envmap[:, y, x] = tensor([color[0], color[1], int(fraction * color[2])])
 
-    if mode == 'hsv':
-        return envmap
-    elif mode == 'rgb':
-        return hsv_to_rgb(envmap / 255.) * 255.
+    return envmap
 
 
 def _rotate_envmap_to_match_direction(centered_envmap, light_direction):

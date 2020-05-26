@@ -44,7 +44,10 @@ def generate_envmap(light_direction, light_temp, mode='hsv', height=16, width=32
         return (255. * hsv_to_rgb(rotated_envmap / 255.)).view(3 * height * width, 1, 1)
     elif mode == 'hsv':
         hue, saturation = rotated_envmap[0, 0, 0], rotated_envmap[1, 0, 0]
-        return cat((hue, saturation, rotated_envmap[2, :, :].view(height * width, 1, 1)), dim=1)
+        # unsqueezing to multiple dimensions: https://github.com/pytorch/pytorch/issues/9410#issuecomment-404968513
+        return cat((hue[(None,)*3],
+                    saturation[(None,)*3],
+                    rotated_envmap[2, :, :].view(height * width, 1, 1)), dim=0)
 
 
 def _envmap_with_centered_light(color, height, width):

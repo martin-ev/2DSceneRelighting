@@ -92,7 +92,7 @@ reconstruction_loss = None
 if ARGUMENTS.loss == 'l1':
     reconstruction_loss = nn.L1Loss().to(device)
 elif ARGUMENTS.loss == 'lpips':
-    reconstruction_loss = LPIPS().to(device)
+    reconstruction_loss = LPIPS(device).to(device)
 
 envmap_loss = None
 if envmap_colorspace == 'rgb':

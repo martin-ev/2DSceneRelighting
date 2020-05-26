@@ -22,7 +22,7 @@ from utils import tensorboard
 
 
 # Get used device
-GPU_IDS = [3]
+GPU_IDS = [1]
 device = setup_device(GPU_IDS)
 
 # Parameters
@@ -31,7 +31,7 @@ BATCH_SIZE = 25
 NUM_WORKERS = 6
 EPOCHS = 20
 SIZE = 256
-SAMPLED_TRAIN_SAMPLES = 300000
+SAMPLED_TRAIN_SAMPLES = 400000
 SAMPLED_TEST_SAMPLES = 10000
 
 # Arguments

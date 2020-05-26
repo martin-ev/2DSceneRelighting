@@ -23,7 +23,7 @@ from utils import tensorboard
 
 
 # Get used device
-GPU_IDS = [1]
+GPU_IDS = [3]
 device = setup_device(GPU_IDS)
 
 # Parameters
@@ -143,7 +143,7 @@ def normalize_image(light_latent):
     # See: https://discuss.pytorch.org/t/current-torch-min-does-not-support-multiple-dimensions/55577/2
     if ARGUMENTS.latent == 'scene-light':
         envmap_hs, envmap_v = light_latent.split([2, 512], dim=1)
-        envmap_hsv = cat((envmap_hs.repeat_interleave(512), envmap_v), dim=1).view(-1, 3, 16, 32)
+        envmap_hsv = cat((envmap_hs.repeat_interleave(512, dim=1), envmap_v), dim=1).view(-1, 3, 16, 32)
         return hsv_to_rgb(envmap_hsv)
     elif ARGUMENTS.latent == 'light':
         # TODO: it should not be normalized across channels

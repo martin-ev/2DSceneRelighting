@@ -201,9 +201,8 @@ class SinglePortraitEnvmapNetAssembler(nn.Module):
 class SceneEnvmapNetSplitter(nn.Module):
     def __init__(self, in_channels=512, scene_latent_channels=512, envmap_h=16, envmap_w=32):
         super(SceneEnvmapNetSplitter, self).__init__()
-        envmap_size = envmap_h * envmap_w
         self.scene_latent_channels = scene_latent_channels
-        self.light_latent_channels = 2 * (envmap_size + 2)  # 2 additional channels for S and V (HSV envmap prediction)
+        self.light_latent_channels = 2 * (envmap_h * envmap_w + 2)  # V + 2 additional channels for H and S
         out_channels = scene_latent_channels + self.light_latent_channels
         self.pre_conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),

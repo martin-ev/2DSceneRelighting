@@ -73,8 +73,8 @@ if ARGUMENTS.latent == 'light':
     assembler = SinglePortraitEnvmapNetAssembler()
     envmap_colorspace = 'rgb'
 elif ARGUMENTS.latent == 'scene-light':
-    splitter = SceneEnvmapNetSplitter()
-    assembler = SceneEnvmapNetAssembler()
+    splitter = SceneEnvmapNetSplitter(scene_latent_channels=1024)
+    assembler = SceneEnvmapNetAssembler(scene_latent_channels=1024)
     envmap_colorspace = 'hsv'
 
 model = SinglePortraitEnvmapSwapNet(

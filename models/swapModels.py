@@ -214,7 +214,7 @@ class SceneEnvmapNetSplitter(nn.Module):
 
     def forward(self, latent):
         latent = self.pre_conv(latent)
-        scene_latent, light_latent = latent.split([self.scene_latent_channels, self.light_latent_channels])
+        scene_latent, light_latent = latent.split([self.scene_latent_channels, self.light_latent_channels], dim=1)
         light_latent = self.weighted_pool(light_latent)
         return scene_latent, light_latent
 

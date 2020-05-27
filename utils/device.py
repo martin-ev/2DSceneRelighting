@@ -15,7 +15,7 @@ def setup_device(gpu_ids):
         print('Cannot use more than one device.')
         return None
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids_string
+    # os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids_string
     dev = device(f'cuda:{gpu_ids_string}')
     print(f'Using GPU {gpu_ids_string}')
     print(f'Created device: {dev}')

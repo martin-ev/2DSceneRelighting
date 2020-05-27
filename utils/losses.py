@@ -17,13 +17,14 @@ def _expand_hsv(tensor, v_channels):
 
 
 def hsv_envmap_loss(x, target):
+    # TODO: x contains nans
     v_channels = x.size()[1] - 2
     x_hsv = _expand_hsv(x, v_channels)
     target_hsv = _expand_hsv(target, v_channels)
     channels = x_hsv.size()[1]
     # view only to match requirements for tensor shape in colorspace conversion
-    return log_l2_loss(hsv_to_rgb(x_hsv.view(-1, 3, channels // 3, 1)),
-                       hsv_to_rgb(target_hsv.view(-1, 3, channels // 3, 1)))
+    return log_l2_loss(255. * hsv_to_rgb(x_hsv.view(-1, 3, channels // 3, 1) / 255.),
+                       255. * hsv_to_rgb(target_hsv.view(-1, 3, channels // 3, 1) / 255.))
 
 
 def cos_loss(a1, a2):

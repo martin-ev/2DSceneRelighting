@@ -144,7 +144,7 @@ def normalize_image(light_latent):
     if ARGUMENTS.latent == 'scene-light':
         envmap_hs, envmap_v = light_latent.split([2, 512], dim=1)
         envmap_hsv = cat((envmap_hs.repeat_interleave(512, dim=1), envmap_v), dim=1).view(-1, 3, 16, 32)
-        return 255. * hsv_to_rgb(envmap_hsv)
+        return hsv_to_rgb(envmap_hsv / 255.)
     elif ARGUMENTS.latent == 'light':
         # TODO: it should not be normalized across channels
         envmap = light_latent.view(-1, 1536)

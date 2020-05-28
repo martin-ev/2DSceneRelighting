@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 
-# LOSS to be nn.MSELoss()
+# From https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/5fd11c27a1b9a5d79ef4ab879146c6b065f6e2a8/models/networks.py#L538
 class NLayerDiscriminator(nn.Module):
     """Defines a PatchGAN discriminator"""
 

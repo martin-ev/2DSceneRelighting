@@ -3,6 +3,7 @@ from torchvision.transforms import Resize
 from torch.utils.data import DataLoader
 from torch import no_grad
 from torch.nn.functional import mse_loss
+from tqdm import tqdm
 
 # imports used for creating models based on their class name
 from models.swapModels import AnOtherSwapNet, SinglePortraitEnvmapSwapNet, \
@@ -28,13 +29,13 @@ compute_lpips = LPIPS(device).to(device)
 # Model definitions
 models = {
     'illumination_predicter': {
-        'path': 'generatorAnOtherSwapNetIlluminationPerdicterNoGAN1590479412.3209212.pth',
+        'path': 'generatorAnOtherSwapNetIlluminationPerdicterNoGAN1590479412.3209212',
         'class': 'AnOtherSwapNet',
         'stored_model_only': True,
         'parametrized': False
     },
     'envmap': {
-        'path': 'generated_envmaps_all_proper_color_scaling_8.pth',
+        'path': 'generated_envmaps_all_proper_color_scaling_8',
         'class': 'SinglePortraitEnvmapSwapNet',
         'splitter_class': 'SinglePortraitEnvmapNetSplitter',
         'assembler_class': 'SinglePortraitEnvmapNetAssembler',
@@ -42,7 +43,7 @@ models = {
         'parametrized': True
     },
     'envmap_with_scene': {
-        'path': 'generated_envmaps_scene_light_split_8.pth',  # TODO: replace the epoch
+        'path': 'generated_envmaps_scene_light_split_6',  # TODO: replace the epoch
         'class': 'SinglePortraitEnvmapSwapNet',
         'splitter_class': 'SceneEnvmapNetSplitter',
         'assembler_class': 'SceneEnvmapNetAssembler',
@@ -87,10 +88,10 @@ with no_grad():
         mse, ssim, psnr, lpips = 0., 0., 0., 0.
 
         # Compute metrics on test set
-        for batch in test_dataloader:
+        for batch in tqdm(test_dataloader):
             image = batch[0][0]['image'].to(device)
-            target = batch[1][0]['image'].to(device)
-            groundtruth = batch[2]['image'].to(device)
+            target = batch[0][1]['image'].to(device)
+            groundtruth = batch[1]['image'].to(device)
 
             output = model(image, target, groundtruth)
             relit = output[0]

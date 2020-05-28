@@ -1,7 +1,8 @@
 import json
 from torchvision.transforms import Resize
 from torch.utils.data import DataLoader
-from torch import no_grad
+from torch.utils.data.sampler import SubsetRandomSampler
+from torch import no_grad, randperm
 from torch.nn.functional import mse_loss
 from tqdm import tqdm
 
@@ -17,6 +18,7 @@ from lpips_pytorch import LPIPS
 
 
 RESULTS_FILE = '/ivrldata1/students/team6/results.json'
+USED_TEST_SAMPLES = 10000
 
 
 # Get used device
@@ -57,7 +59,8 @@ pairing_strategies = [DifferentScene(), DifferentLightDirection()]
 test_dataset = InputTargetGroundtruthDataset(data_path=VALIDATION_DATA_PATH,
                                              transform=Resize(256),
                                              pairing_strategies=pairing_strategies)
-test_dataloader = DataLoader(test_dataset, batch_size=1, num_workers=2)
+indices = randperm(len(test_dataset))[:USED_TEST_SAMPLES]
+test_dataloader = DataLoader(test_dataset, batch_size=1, num_workers=2, sampler=SubsetRandomSampler(indices))
 TEST_SET_SIZE = len(test_dataloader)
 
 
@@ -75,6 +78,7 @@ def load_model(configuration):
 
 
 # Evaluate
+print('Computing metrics on', TEST_SET_SIZE, 'test samples')
 results = {}
 with no_grad():
     for model_name, config in models.items():

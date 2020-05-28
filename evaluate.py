@@ -107,10 +107,10 @@ with no_grad():
             relit = output[0]
 
             # Compute metrics on sample
-            mse += mse_loss(relit, groundtruth)
-            ssim += compute_ssim(relit, groundtruth)
-            psnr += compute_psnr(relit, groundtruth)
-            lpips += compute_lpips(relit, groundtruth)
+            mse += mse_loss(relit, groundtruth).item()
+            ssim += compute_ssim(relit, groundtruth).item()
+            psnr += compute_psnr(relit, groundtruth).item()
+            lpips += compute_lpips(relit, groundtruth).item()
 
         # Average over test set
         mse /= TEST_SET_SIZE

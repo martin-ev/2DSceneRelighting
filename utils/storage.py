@@ -25,5 +25,10 @@ def save_checkpoint(model_state_dict, optimizer_state_dict, name):
     }, build_checkpoint_path(name))
 
 
+def load_checkpoint(name):
+    return torch.load(build_checkpoint_path(name))
+
+
 def load_trained(model, name):
     model.load_state_dict(torch.load(build_trained_model_path(name)))
+    return model

@@ -45,7 +45,7 @@ models = {
         'parametrized': True
     },
     'envmap_with_scene': {
-        'path': 'generated_envmaps_scene_light_split_6',  # TODO: replace the epoch
+        'path': 'generated_envmaps_scene_light_split_6',
         'class': 'SinglePortraitEnvmapSwapNet',
         'splitter_class': 'SceneEnvmapNetSplitter',
         'assembler_class': 'SceneEnvmapNetAssembler',
@@ -69,8 +69,14 @@ def load_model(configuration):
         net = eval(configuration['class'])()
         return load_trained(net, configuration['path'])
     elif configuration['parametrized']:
-        splitter = eval(configuration['splitter_class'])(scene_latent_channels=1024)
-        assembler = eval(configuration['assembler_class'])(scene_latent_channels=1024)
+        splitter, assembler = None, None
+        if configuration['splitter_class'] == 'SinglePortraitEnvmapNetSplitter':
+            splitter = eval(configuration['splitter_class'])()
+            assembler = eval(configuration['assembler_class'])()
+        elif configuration['splitter_class'] == 'SceneEnvmapNetSplitter':
+            splitter = eval(configuration['splitter_class'])(scene_latent_channels=1024)
+            assembler = eval(configuration['assembler_class'])(scene_latent_channels=1024)
+
         net = eval(configuration['class'])(splitter, assembler)
         checkpoint = load_checkpoint(configuration['path'])
         net.load_state_dict(checkpoint['model_state_dict'])

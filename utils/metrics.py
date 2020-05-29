@@ -3,7 +3,7 @@ from kornia.losses import ssim as kornia_ssim
 
 
 def psnr(image_batch, groundtruth_batch):
-    return kornia_psnr(image_batch, groundtruth_batch, 255.)
+    return kornia_psnr(image_batch, groundtruth_batch, 1.)
 
 
 def ssim(image_batch, groundtruth_batch):
